@@ -1,0 +1,122 @@
+.exclusive-offers{
+
+    padding:20px 70px;
+
+    background:#ffffff;
+
+}
+
+.section-title{
+
+    text-align:center;
+
+    margin-bottom:40px;
+
+}
+
+.section-title h2{
+
+    font-size:18px;
+
+    font-style: italic;
+    color:#d95d81;
+
+    margin-bottom:10px;
+
+}
+
+.section-title p{
+
+    color:#666;
+
+    font-size:12px;
+
+}
+
+.product-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:30px;
+
+}
+
+.product-card{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    overflow:hidden;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+
+    transition:.3s;
+
+    padding-bottom:20px;
+
+}
+
+.product-card:hover{
+
+    transform:translateY(-8px);
+
+}
+
+.product-image{
+
+    height:260px;
+
+    background:#f7dbe0;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    color:#888;
+
+    font-size:12px;
+
+}
+
+.product-card h3{
+
+    margin:20px;
+
+    font-size:16px;
+
+}
+
+.price{
+
+    margin:0 20px 20px;
+
+    color:#d95d81;
+
+    font-size:14px;
+
+    font-weight:600;
+
+}
+
+.product-card button{
+
+    margin-left:20px;
+
+    border:none;
+
+    background:#d95d81;
+
+    color:white;
+
+    padding:12px 25px;
+
+    border-radius:30px;
+
+    cursor:pointer;
+
+}
