@@ -1,0 +1,126 @@
+.stores-page {
+  min-height: 100vh;
+  padding: 60px 80px;
+  background: #fff8f8;
+}
+
+/* Header */
+
+.stores-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.stores-header h1 {
+  font-size: 42px;
+  color: #d95d81;
+  margin-bottom: 12px;
+}
+
+.stores-header p {
+  font-size: 17px;
+  color: #666;
+}
+
+/* Grid */
+
+.stores-grid {
+  max-width: 1000px;
+  margin: 0 auto;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 30px;
+}
+
+/* Card */
+
+.store-page-card {
+  background: white;
+
+  border-radius: 18px;
+
+  padding: 25px 20px;
+
+  text-align: center;
+
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+
+  transition: 0.3s;
+}
+
+.store-page-card:hover {
+  transform: translateY(-6px);
+}
+
+/* Logo */
+
+.store-page-logo {
+  width: 110px;
+  height: 110px;
+
+  margin: 0 auto 18px;
+
+  border-radius: 50%;
+
+  border: 4px solid #f3c7d3;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: white;
+
+  overflow: hidden;
+}
+
+.store-page-logo img {
+  width: 75%;
+  height: 75%;
+
+  object-fit: contain;
+}
+
+/* Store name */
+
+.store-page-card h2 {
+  font-size: 21px;
+  color: #333;
+
+  margin-bottom: 8px;
+}
+
+/* Description */
+
+.store-page-card p {
+  font-size: 14px;
+  color: #777;
+
+  line-height: 1.5;
+
+  margin-bottom: 18px;
+}
+
+/* Button */
+
+.store-page-card button {
+  border: none;
+
+  background: #d95d81;
+  color: white;
+
+  padding: 10px 20px;
+
+  border-radius: 20px;
+
+  cursor: pointer;
+
+  font-size: 14px;
+
+  transition: 0.3s;
+}
+
+.store-page-card button:hover {
+  background: #c84e72;
+}

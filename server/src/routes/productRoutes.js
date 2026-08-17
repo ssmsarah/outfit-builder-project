@@ -1,22 +1,24 @@
-import { Router } from 'express';
+import express from "express";
+
 import {
-  createCatalogItem,
-  deleteCatalogItem,
-  getCatalogItem,
-  listCatalog,
-  seedCatalog,
-  updateCatalogItem
-} from '../controllers/productController.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
-import { requireProductAdmin } from '../middleware/adminMiddleware.js';
+  getProducts,
+  getProductsByCategory,
+  getProduct,
+  createProduct,
+} from "../controllers/productController.js";
 
-const router = Router();
+const router = express.Router();
 
-router.get('/', listCatalog);
-router.post('/seed', requireAuth, requireProductAdmin, seedCatalog);
-router.post('/', requireAuth, requireProductAdmin, createCatalogItem);
-router.get('/:id', getCatalogItem);
-router.put('/:id', requireAuth, requireProductAdmin, updateCatalogItem);
-router.delete('/:id', requireAuth, requireProductAdmin, deleteCatalogItem);
+// Get all products
+router.get("/", getProducts);
+
+// Get products by category
+router.get("/category/:category", getProductsByCategory);
+
+// Get single product
+router.get("/:id", getProduct);
+
+// Create product
+router.post("/", createProduct);
 
 export default router;

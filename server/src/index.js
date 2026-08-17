@@ -1,27 +1,24 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
+
 import app from "./app.js";
 import { connectDB } from "./config/db.js";
-import { seedDemoProducts } from "./services/productService.js";
+
+console.log("MONGODB_URI loaded:", !!process.env.MONGODB_URI);
 
 const PORT = process.env.PORT || 5000;
 
-async function bootstrap() {
-  if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is missing from .env");
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server failed to start:", error.message);
+    process.exit(1);
   }
+};
 
-  await connectDB(process.env.MONGODB_URI);
-
-  console.log("MongoDB connected successfully");
-
-  await seedDemoProducts();
-
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
-
-bootstrap().catch((error) => {
-  console.error("Server startup failed:", error);
-  process.exit(1);
-});
+startServer();

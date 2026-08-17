@@ -1,69 +1,95 @@
-import bcrypt from 'bcryptjs';
-import { createUser, findUserByEmail, findUserById, publicUser } from '../services/authStore.js';
-import { signAuthToken } from '../services/tokenService.js';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-function normalizeAuthPayload(body = {}) {
-  return {
-    name: String(body.name ?? '').trim(),
-    email: String(body.email ?? '').trim().toLowerCase(),
-    password: String(body.password ?? '')
-  };
-}
+export const signup = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-function buildAuthResponse(user) {
-  return {
-    user: publicUser(user),
-    token: signAuthToken(user)
-  };
-}
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        message: "Name, email and password are required",
+      });
+    }
 
-export async function register(req, res) {
-  const payload = normalizeAuthPayload(req.body);
+    const existingUser = await User.findOne({ email });
 
-  if (!payload.name || !payload.email || payload.password.length < 8) {
-    return res.status(400).json({ message: 'Name, email, and a password with at least 8 characters are required.' });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Email is already registered",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    res.status(201).json({
+      message: "Account created successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Signup failed",
+      error: error.message,
+    });
   }
+};
 
-  const existingUser = await findUserByEmail(payload.email);
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  if (existingUser) {
-    return res.status(409).json({ message: 'An account with that email already exists.' });
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Login failed",
+      error: error.message,
+    });
   }
-
-  const passwordHash = await bcrypt.hash(payload.password, 10);
-  const user = await createUser({ name: payload.name, email: payload.email, passwordHash });
-
-  return res.status(201).json(buildAuthResponse(user));
-}
-
-export async function login(req, res) {
-  const payload = normalizeAuthPayload(req.body);
-
-  if (!payload.email || !payload.password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
-  }
-
-  const user = await findUserByEmail(payload.email);
-
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid credentials.' });
-  }
-
-  const passwordMatches = await bcrypt.compare(payload.password, user.passwordHash);
-
-  if (!passwordMatches) {
-    return res.status(401).json({ message: 'Invalid credentials.' });
-  }
-
-  return res.json(buildAuthResponse(user));
-}
-
-export async function me(req, res) {
-  const user = await findUserById(req.user.id);
-
-  if (!user) {
-    return res.status(404).json({ message: 'User not found.' });
-  }
-
-  return res.json({ user: publicUser(user) });
-}
+};
