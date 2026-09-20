@@ -59,7 +59,7 @@ const Login = () => {
         );
       }
 
-      navigate("/");
+      navigate("/home");
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {

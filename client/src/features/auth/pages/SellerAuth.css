@@ -1,0 +1,234 @@
+.seller-auth-page {
+  min-height: 100vh;
+  background: #fff8f8;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px 20px;
+  box-sizing: border-box;
+}
+
+.seller-auth-card {
+  position: relative;
+
+  width: 400px;
+  max-width: 100%;
+
+  padding: 35px 40px;
+
+  box-sizing: border-box;
+
+  background: #ffffff;
+
+  border-radius: 20px;
+
+  box-shadow: 0 12px 40px rgba(228, 110, 138, 0.15);
+}
+
+.seller-close {
+  position: absolute;
+
+  top: 12px;
+  right: 15px;
+
+  border: none;
+  background: transparent;
+
+  font-size: 25px;
+  color: #777;
+
+  cursor: pointer;
+}
+
+.seller-close:hover {
+  color: #e46e8a;
+}
+
+.seller-logo {
+  width: 250px;
+  height: auto;
+  max-height: 100px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 15px;
+}
+
+.seller-auth-card h1 {
+  margin: 0;
+
+  text-align: center;
+
+  font-size: 28px;
+  color: #333;
+}
+
+.seller-subtitle {
+  margin: 8px 0 25px;
+
+  text-align: center;
+
+  color: #888;
+
+  font-size: 14px;
+}
+
+.seller-input-group {
+  margin-bottom: 15px;
+}
+
+.seller-input-group label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #444;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+.seller-input-group input {
+  width: 100%;
+  height: 43px;
+
+  padding: 0 13px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #ead9dd;
+
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #fffafa;
+
+  font-size: 13px;
+}
+
+.seller-input-group input:focus {
+  border-color: #e46e8a;
+
+  background: #fff;
+
+  box-shadow: 0 0 0 3px rgba(228, 110, 138, 0.08);
+}
+
+.seller-login-button {
+  width: 100%;
+  height: 44px;
+
+  margin-top: 5px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: #e46e8a;
+
+  color: white;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.seller-login-button:hover {
+  background: #d85f7c;
+}
+
+.seller-error {
+  margin-bottom: 15px;
+
+  padding: 10px;
+
+  border-radius: 8px;
+
+  background: #fff0f2;
+
+  border: 1px solid #f3c5cf;
+
+  color: #c94f69;
+
+  font-size: 13px;
+}
+
+.seller-success {
+  margin-bottom: 15px;
+
+  padding: 10px;
+
+  border-radius: 8px;
+
+  background: #f0fff5;
+
+  border: 1px solid #b8e8c9;
+
+  color: #31804b;
+
+  font-size: 13px;
+}
+
+.seller-register-section {
+  margin-top: 22px;
+
+  padding-top: 18px;
+
+  border-top: 1px solid #eeeeee;
+
+  text-align: center;
+}
+
+.seller-register-section p {
+  margin: 0 0 6px;
+
+  color: #888;
+
+  font-size: 13px;
+}
+
+.seller-register-section a {
+  color: #e46e8a;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  text-decoration: none;
+}
+
+.seller-register-section a:hover {
+  text-decoration: underline;
+}
+
+.seller-input-group textarea {
+  width: 100%;
+  min-height: 80px;
+
+  padding: 12px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #ead9dd;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #fffafa;
+
+  font-size: 13px;
+
+  resize: vertical;
+}
+
+.seller-input-group textarea:focus {
+  border-color: #e46e8a;
+}
+@media (max-width: 480px) {
+  .seller-auth-card {
+    padding: 30px 25px;
+  }
+}

@@ -2,15 +2,24 @@ import express from "express";
 
 import {
   getProducts,
+  getMyProducts,
   getProductsByCategory,
   getProduct,
   createProduct,
+  deleteProduct,
+  updateProduct,
 } from "../controllers/productController.js";
+
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Get all products
+// Used by customers/storefront
 router.get("/", getProducts);
+
+// Get products belonging only to logged-in seller
+router.get("/my-products", protect, getMyProducts);
 
 // Get products by category
 router.get("/category/:category", getProductsByCategory);
@@ -19,6 +28,11 @@ router.get("/category/:category", getProductsByCategory);
 router.get("/:id", getProduct);
 
 // Create product
-router.post("/", createProduct);
+// Seller must be logged in
+router.post("/", protect, createProduct);
+
+router.delete("/:id", protect, deleteProduct);
+
+router.put("/:id", protect, updateProduct);
 
 export default router;

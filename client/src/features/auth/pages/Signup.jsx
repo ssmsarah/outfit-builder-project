@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../../assets/shopea.png";
@@ -8,12 +9,14 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -24,23 +27,46 @@ const Signup = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+
+    // Clear error when user starts correcting the form
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setError("");
+
+    // Check password length
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    // Check whether passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Combine first and last name
+      const name = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+
       const response = await fetch(
-        "http://localhost:5000/api/auth/register",
+        "http://localhost:5000/api/auth/signup",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            name,
+            email: formData.email.trim(),
+            password: formData.password,
+          }),
         }
       );
 
@@ -52,10 +78,12 @@ const Signup = () => {
         );
       }
 
+      // Save token if backend sends one
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
 
+      // Save user information
       if (data.user) {
         localStorage.setItem(
           "user",
@@ -63,10 +91,11 @@ const Signup = () => {
         );
       }
 
+      // Signup successful
       navigate("/");
     } catch (err) {
       setError(
-        err.message || "Something went wrong"
+        err.message || "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
@@ -89,7 +118,6 @@ const Signup = () => {
           ×
         </button>
 
-
         {/* ================= LEFT ================= */}
 
         <div className="auth-left">
@@ -107,20 +135,17 @@ const Signup = () => {
 
           </div>
 
-
           <h1>
             EVERY STORE
             <br />
             HAS A <span>STORY.</span>
           </h1>
 
-
           <p>
             Join Shoppea and discover products,
             collections and stores that match your
             personal style.
           </p>
-
 
           <div className="auth-benefits">
 
@@ -144,7 +169,6 @@ const Signup = () => {
 
             </div>
 
-
             <div className="auth-benefit">
 
               <div className="auth-benefit-icon">
@@ -164,7 +188,6 @@ const Signup = () => {
               </div>
 
             </div>
-
 
             <div className="auth-benefit">
 
@@ -190,7 +213,6 @@ const Signup = () => {
 
         </div>
 
-
         {/* ================= RIGHT ================= */}
 
         <div className="auth-right">
@@ -208,7 +230,6 @@ const Signup = () => {
               </p>
 
             </div>
-
 
             <form
               className="auth-form"
@@ -238,7 +259,6 @@ const Signup = () => {
 
                 </div>
 
-
                 <div className="auth-field">
 
                   <label htmlFor="lastName">
@@ -260,7 +280,6 @@ const Signup = () => {
 
               </div>
 
-
               {/* EMAIL */}
 
               <div className="auth-field">
@@ -281,7 +300,6 @@ const Signup = () => {
                 />
 
               </div>
-
 
               {/* PASSWORD */}
 
@@ -313,9 +331,12 @@ const Signup = () => {
                     type="button"
                     className="password-toggle"
                     onClick={() =>
-                      setShowPassword(
-                        !showPassword
-                      )
+                      setShowPassword(!showPassword)
+                    }
+                    aria-label={
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
                     }
                   >
                     {showPassword ? "◉" : "◌"}
@@ -325,6 +346,52 @@ const Signup = () => {
 
               </div>
 
+              {/* CONFIRM PASSWORD */}
+
+              <div className="auth-field">
+
+                <label htmlFor="confirmPassword">
+                  Confirm Password
+                </label>
+
+                <div className="auth-input-wrapper">
+
+                  <input
+                    id="confirmPassword"
+                    className="auth-input"
+                    type={
+                      showConfirmPassword
+                        ? "text"
+                        : "password"
+                    }
+                    name="confirmPassword"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    minLength={6}
+                  />
+
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() =>
+                      setShowConfirmPassword(
+                        !showConfirmPassword
+                      )
+                    }
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
+                  >
+                    {showConfirmPassword ? "◉" : "◌"}
+                  </button>
+
+                </div>
+
+              </div>
 
               {/* ERROR */}
 
@@ -340,7 +407,6 @@ const Signup = () => {
                 </p>
               )}
 
-
               {/* SIGNUP BUTTON */}
 
               <button
@@ -355,7 +421,6 @@ const Signup = () => {
 
             </form>
 
-
             {/* DIVIDER */}
 
             <div className="auth-divider">
@@ -366,22 +431,22 @@ const Signup = () => {
 
             </div>
 
-
             {/* GOOGLE */}
 
             <button
-  type="button"
-  className="google-button"
->
-  <img
-    src={googleLogo}
-    alt="Google"
-    className="google-logo"
-  />
+              type="button"
+              className="google-button"
+            >
+              <img
+                src={googleLogo}
+                alt="Google"
+                className="google-logo"
+              />
 
-  <span>Continue with Google</span>
-</button>
-
+              <span>
+                Continue with Google
+              </span>
+            </button>
 
             {/* LOGIN */}
 
@@ -406,3 +471,4 @@ const Signup = () => {
 };
 
 export default Signup;
+

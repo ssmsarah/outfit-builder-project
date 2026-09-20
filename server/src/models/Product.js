@@ -36,6 +36,13 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Seller who owns this product
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
     image: {
       type: String,
       required: true,

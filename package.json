@@ -13,6 +13,7 @@
     "start": "npm run start --workspace server"
   },
   "dependencies": {
+    "lucide-react": "^1.47.0",
     "mongodb": "^7.5.0"
   }
 }

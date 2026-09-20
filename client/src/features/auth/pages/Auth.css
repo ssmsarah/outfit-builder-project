@@ -542,7 +542,7 @@
 
   border-radius: 11px;
 
-  background: #e46e8a;
+  background: #f2809b;
 
   color: white;
 
@@ -563,12 +563,12 @@
 }
 
 .auth-submit:hover {
-  background: #d75d7c;
+  background: #d95d81;
 
   transform: translateY(-1px);
 
   box-shadow:
-    0 9px 22px rgba(228, 110, 138, 0.32);
+    0 9px 22px rgba(234, 112, 140, 0.32);
 }
 
 .auth-submit:active {

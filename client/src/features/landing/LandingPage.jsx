@@ -3,27 +3,28 @@ import Hero from "./components/Hero";
 import ExclusiveOffers from "./components/ExclusiveOffers";
 import VisitStores from "./components/VisitStores";
 import CategorySection from "./components/CategorySection";
+import Footer from "./components/Footer";
+import "./LandingPage.css";
+import ProductSection from "./components/ProductSection";
 
 const LandingPage = () => {
   return (
-    <>
-      <Navbar />
-      <Hero/>
-      <ExclusiveOffers/>
-      <VisitStores/>
-      <CategorySection/>
+    <div className="landing-page">
 
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#ffffff",
-        }}
-      >
-        {/* Hero section goes here */}
+      <Navbar />
+
+      <main className="landing-content">
+        <Hero />
+        <ExclusiveOffers />
+        <VisitStores />
+        <CategorySection />
+        <ProductSection />
       </main>
-    </>
+
+      <Footer />
+
+    </div>
   );
 };
 
 export default LandingPage;
-
