@@ -1,0 +1,165 @@
+.confirmation-page {
+  min-height: 75vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px 20px;
+
+  background: #fff8f8;
+}
+
+.confirmation-card {
+  width: 100%;
+  max-width: 480px;
+
+  background: white;
+  border-radius: 24px;
+
+  padding: 48px 36px;
+
+  text-align: center;
+
+  box-shadow: 0 20px 50px rgba(40, 15, 25, 0.12);
+
+  animation: confirmationAppear 0.4s ease;
+}
+
+@keyframes confirmationAppear {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tick-wrapper {
+  width: 90px;
+  height: 90px;
+
+  margin: 0 auto 24px;
+}
+
+.tick-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tick-circle {
+  stroke: #2fae6b;
+  stroke-width: 4;
+
+  stroke-dasharray: 252;
+  stroke-dashoffset: 252;
+
+  animation: tickCircleDraw 0.6s ease forwards;
+}
+
+.tick-check {
+  stroke: #2fae6b;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+
+  animation: tickCheckDraw 0.35s ease forwards 0.55s;
+}
+
+@keyframes tickCircleDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes tickCheckDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.confirmation-card h1 {
+  font-size: 26px;
+  color: #35262c;
+  margin-bottom: 10px;
+}
+
+.confirmation-card > p {
+  color: #7e6a71;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 26px;
+}
+
+.confirmation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  background: #fdf1f4;
+  border-radius: 14px;
+  padding: 18px 20px;
+
+  margin-bottom: 28px;
+}
+
+.confirmation-details div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.confirmation-details span {
+  color: #88767d;
+}
+
+.confirmation-details strong {
+  color: #35262c;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.confirmation-secondary,
+.confirmation-primary {
+  flex: 1;
+
+  padding: 13px;
+
+  border-radius: 30px;
+
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.confirmation-secondary {
+  background: white;
+  color: #E46E8A;
+  border: 1px solid #E46E8A;
+}
+
+.confirmation-secondary:hover {
+  background: #fdf1f4;
+  transform: translateY(-2px);
+}
+
+.confirmation-primary {
+  background: linear-gradient(135deg, #e46e8a 0%, #c84e72 100%);
+  color: white;
+  border: none;
+}
+
+.confirmation-primary:hover {
+  box-shadow: 0 8px 20px rgba(200, 78, 114, 0.35);
+  transform: translateY(-2px);
+}

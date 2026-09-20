@@ -1,11 +1,11 @@
 .exclusive-offers {
-  padding: 28px 5% 40px;
+  padding: 28px 5% 44px;
   background: #ffffff;
 }
 
 .section-title {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 28px;
 }
 
 .section-title h2 {
@@ -13,9 +13,105 @@
 
   color: #df5d7c;
 
-  font-size: 25px;
-  font-style: italic;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+
+/* ==============================
+   SECTION HEADER ROW (title + View All)
+============================== */
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  max-width: 1600px;
+  margin: 0 auto 26px;
+}
+
+.section-header-row .section-title-text h2 {
+  margin: 0;
+
+  color: #df5d7c;
+
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.section-header-row .section-title-text p {
+  margin: 6px 0 0;
+
+  color: #9b858b;
+  font-size: 13px;
+}
+
+.section-view-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  color: #c84e72;
+
+  font-size: 13px;
   font-weight: 700;
+
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition: gap 0.2s ease, color 0.2s ease;
+}
+
+.section-view-all:hover {
+  gap: 10px;
+  color: #a83f5c;
+}
+
+
+/* ==============================
+   FILTER TABS
+============================== */
+
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  max-width: 1600px;
+  margin: 0 auto 28px;
+}
+
+.filter-tab {
+  border: 1px solid #f0d5dc;
+  border-radius: 30px;
+
+  padding: 8px 18px;
+
+  background: #ffffff;
+  color: #7e6a71;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.filter-tab:hover {
+  border-color: #e46e8a;
+  color: #c84e72;
+  transform: translateY(-1px);
+}
+
+.filter-tab.active {
+  background: linear-gradient(135deg, #e46e8a 0%, #c84e72 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(200, 78, 114, 0.28);
 }
 
 
@@ -169,6 +265,40 @@
   font-size: 15px;
 
   font-weight: 700;
+}
+
+.price-original {
+  margin-left: 8px;
+
+  color: #b3a1a7;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: line-through;
+}
+
+.discount-badge {
+  position: absolute;
+
+  top: 14px;
+  left: 14px;
+
+  background: #35262c;
+  color: white;
+
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+.new-badge {
+  background: linear-gradient(135deg, #e46e8a 0%, #c84e72 100%);
+  box-shadow: 0 4px 10px rgba(200, 78, 114, 0.3);
 }
 
 

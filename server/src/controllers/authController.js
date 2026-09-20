@@ -109,6 +109,12 @@ export const login = async (req, res) => {
       });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({
+        message: "Your account has been blocked. Please contact support.",
+      });
+    }
+
     // Seller verification check
     if (user.role === "seller") {
       if (user.sellerStatus === "pending") {

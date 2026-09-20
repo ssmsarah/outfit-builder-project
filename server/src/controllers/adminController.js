@@ -145,3 +145,63 @@ export const rejectSeller = async (req, res) => {
     });
   }
 };
+
+
+// ===============================
+// Get All Customers
+// ===============================
+
+export const getUsers = async (req, res) => {
+  try {
+    const users = await User.find({
+      role: "user",
+    }).select("name email phone address isBlocked createdAt");
+
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch users",
+      error: error.message,
+    });
+  }
+};
+
+
+// ===============================
+// Block / Unblock User
+// ===============================
+
+export const toggleUserBlock = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({
+      _id: id,
+      role: "user",
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+
+    res.status(200).json({
+      message: user.isBlocked
+        ? "User blocked successfully"
+        : "User unblocked successfully",
+      user: {
+        id: user._id,
+        isBlocked: user.isBlocked,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update user status",
+      error: error.message,
+    });
+  }
+};

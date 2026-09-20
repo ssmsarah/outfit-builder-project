@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -8,14 +9,30 @@ import {
   User,
   LogOut,
   PlusCircle,
+  ArrowLeft,
   TrendingUp,
 } from "lucide-react";
 
 import logo from "../../../assets/shopea.png";
+import api from "../../../api/axios";
+import ProductForm from "../components/ProductForm";
 import "./SellerDashboard.css";
 
 const SellerDashboard = () => {
-  const [activePage, setActivePage] = useState("Dashboard");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [activePage, setActivePage] = useState(
+    searchParams.get("tab") || "Dashboard"
+  );
+
+  // null = product list view, {mode:"add"} or {mode:"edit", product} = form view
+  const [productView, setProductView] = useState(null);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/seller");
+  };
   const [verificationStatus, setVerificationStatus] = useState("Pending");
 
   /* Component */
@@ -84,99 +101,112 @@ const handleChangePassword = () => {
 
 
     /* =========================
-     SAMPLE ORDERS
+     ORDERS
   ========================= */
 
-  const [orders] = useState([
-    {
-      id: "ORD-1001",
-      customer: "Anisha Sharma",
-      date: "Sep 20, 2026",
-      amount: 3500,
-      payment: "Paid",
-      status: "Delivered",
-    },
-    {
-      id: "ORD-1002",
-      customer: "Riya Thapa",
-      date: "Sep 19, 2026",
-      amount: 2200,
-      payment: "Pending",
-      status: "Processing",
-    },
-    {
-      id: "ORD-1003",
-      customer: "Sita KC",
-      date: "Sep 18, 2026",
-      amount: 4800,
-      payment: "Paid",
-      status: "Shipped",
-    },
-    {
-      id: "ORD-1004",
-      customer: "Priya Gurung",
-      date: "Sep 17, 2026",
-      amount: 1800,
-      payment: "Paid",
-      status: "Pending",
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  const fetchSellerOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const { data } = await api.get("/orders/seller-orders");
+      setOrders(data);
+    } catch (error) {
+      console.error("Seller orders error:", error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSellerOrders();
+  }, []);
+
+  const handleItemStatusChange = async (orderId, itemId, status) => {
+    try {
+      await api.patch(`/orders/${orderId}/items/${itemId}/status`, {
+        status,
+      });
+      fetchSellerOrders();
+    } catch (error) {
+      console.error("Update item status error:", error);
+    }
+  };
+
+  /* =========================
+     REVIEWS
+  ========================= */
+
+  const [reviews, setReviews] = useState([]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const { data } = await api.get("/reviews/seller-reviews");
+        setReviews(data);
+      } catch (error) {
+        console.error("Seller reviews error:", error);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  /* =========================
+     DERIVED SALES / PAYMENT DATA
+  ========================= */
+
+  const allItems = orders.flatMap((order) =>
+    order.items.map((item) => ({ ...item, order }))
+  );
+
+  const totalEarnings = allItems
+    .filter((item) => item.order.paymentStatus === "paid")
+    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const pendingEarnings = allItems
+    .filter((item) => item.order.paymentStatus !== "paid")
+    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const totalSales = allItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  const ratingCounts = [5, 4, 3, 2, 1].map(
+    (star) => reviews.filter((r) => r.rating === star).length
+  );
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : 0;
 
   /* =========================
      PRODUCT STATES
   ========================= */
 
-  const [showProductForm, setShowProductForm] = useState(false);
-const [products, setProducts] = useState([]);
-const [editingProductId, setEditingProductId] = useState(null);
-const [error, setError] = useState("");
+  const [products, setProducts] = useState([]);
+  const [error, setError] = useState("");
 
-useEffect(() => {
   const fetchMyProducts = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setError("Please log in again.");
-        return;
-      }
-
-      const response = await fetch(
-        "http://localhost:5000/api/products/my-products",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch products");
-      }
-
+      const { data } = await api.get("/products/my-products");
       setProducts(data);
-    } catch (error) {
-      console.error("Products error:", error);
-      setError(error.message);
+    } catch (err) {
+      console.error("Products error:", err);
+      setError(err.response?.data?.message || "Failed to fetch products");
     }
   };
 
-  fetchMyProducts();
-}, []);
+  useEffect(() => {
+    fetchMyProducts();
+  }, []);
 
-const [productForm, setProductForm] = useState({
-  name: "",
-  category: "",
-  description: "",
-  price: "",
-  stock: "",
-  image: "",
-  size: "",
-  color: "",
-  status: "Active",
-});
+  const handleProductFormSuccess = () => {
+    setProductView(null);
+    fetchMyProducts();
+  };
 
   /* =========================
      MENU ITEMS
@@ -210,244 +240,23 @@ const [productForm, setProductForm] = useState({
   ];
 
   /* =========================
-     PRODUCT FORM HANDLERS
+     PRODUCT ACTIONS
   ========================= */
 
-  const handleProductChange = (e) => {
-    const { name, value } = e.target;
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm("Delete this product? This cannot be undone.")) return;
 
-    setProductForm({
-      ...productForm,
-      [name]: value,
-    });
-  };
+    try {
+      await api.delete(`/products/${id}`);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-
-    if (file) {
-      setProductForm({
-        ...productForm,
-        image: URL.createObjectURL(file),
-      });
+      setProducts((prevProducts) =>
+        prevProducts.filter((product) => product._id !== id)
+      );
+    } catch (err) {
+      console.error("Delete product error:", err);
+      setError(err.response?.data?.message || "Failed to delete product");
     }
   };
-
-const handleAddProduct = async (e) => {
-  e.preventDefault();
-
-  try {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setError("Please log in again.");
-      return;
-    }
-
-    const response = await fetch(
-      "http://localhost:5000/api/products",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: productForm.name,
-          category: productForm.category.toLowerCase(),
-          description: productForm.description,
-          price: Number(productForm.price),
-          stock: Number(productForm.stock),
-          image: productForm.image || "https://via.placeholder.com/150",
-          sizes: productForm.size
-            ? productForm.size
-                .split(",")
-                .map((size) => size.trim())
-            : [],
-          colors: productForm.color
-            ? productForm.color
-                .split(",")
-                .map((color) => color.trim())
-            : [],
-          available: productForm.status === "Active",
-         
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to add product"
-      );
-    }
-
-    // Add the product returned from MongoDB
-    setProducts((prevProducts) => [
-      ...prevProducts,
-      data,
-    ]);
-    alert("Product added successfully!");
-
-    // Clear form
-    setProductForm({
-      name: "",
-      category: "",
-      description: "",
-      price: "",
-      stock: "",
-      image: "",
-      size: "",
-      color: "",
-      status: "Active",
-    });
-
-    setShowProductForm(false);
-    setError("");
-
-    alert("Product added successfully!");
-  } catch (error) {
-    console.error("Add product error:", error);
-    setError(error.message);
-  }
-};
-
-const handleDeleteProduct = async (id) => {
-  try {
-    const token = localStorage.getItem("token");
-
-    console.log("Deleting product ID:", id);
-    console.log("Token exists:", !!token);
-
-    const response = await fetch(
-      `http://localhost:5000/api/products/${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    console.log("Delete HTTP status:", response.status);
-
-    const data = await response.json();
-
-    console.log("Delete backend response:", data);
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to delete product");
-    }
-
-    setProducts((prevProducts) =>
-      prevProducts.filter((product) => product._id !== id)
-    );
-
-    alert("Product deleted successfully!");
-  } catch (error) {
-    console.error("Delete product error:", error);
-    setError(error.message);
-  }
-};
-
-const handleEditProduct = (product) => {
-  setEditingProductId(product._id);
-
-  setProductForm({
-    name: product.name || "",
-    category: product.category
-      ? product.category.charAt(0).toUpperCase() +
-        product.category.slice(1)
-      : "",
-    description: product.description || "",
-    price: product.price ?? "",
-    stock: product.stock ?? "",
-    image: product.image || "",
-    size: product.sizes ? product.sizes.join(", ") : "",
-    color: product.colors ? product.colors.join(", ") : "",
-    status: product.available ? "Active" : "Inactive",
-  });
-
-  setShowProductForm(true);
-};
-
-const handleUpdateProduct = async (e) => {
-  e.preventDefault();
-
-  try {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setError("Please log in again.");
-      return;
-    }
-
-    const response = await fetch(
-      `http://localhost:5000/api/products/${editingProductId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: productForm.name,
-          category: productForm.category.toLowerCase(),
-          description: productForm.description,
-          price: Number(productForm.price),
-          stock: Number(productForm.stock),
-          image: productForm.image,
-          sizes: productForm.size
-            ? productForm.size.split(",").map((size) => size.trim())
-            : [],
-          colors: productForm.color
-            ? productForm.color.split(",").map((color) => color.trim())
-            : [],
-          available: productForm.status === "Active",
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to update product"
-      );
-    }
-
-    setProducts((prevProducts) =>
-      prevProducts.map((product) =>
-        product._id === editingProductId
-          ? data.product
-          : product
-      )
-    );
-
-    setEditingProductId(null);
-
-    setProductForm({
-      name: "",
-      category: "",
-      description: "",
-      price: "",
-      stock: "",
-      image: "",
-      size: "",
-      color: "",
-      status: "Active",
-    });
-
-    setShowProductForm(false);
-    setError("");
-
-    alert("Product updated successfully!");
-  } catch (error) {
-    console.error("Update product error:", error);
-    setError(error.message);
-  }
-};
 
  
   /* =========================
@@ -532,7 +341,7 @@ const handleUpdateProduct = async (e) => {
             className="add-product-sidebar"
             onClick={() => {
               setActivePage("Products");
-              setShowProductForm(true);
+              setProductView({ mode: "add" });
             }}
           >
 
@@ -543,7 +352,7 @@ const handleUpdateProduct = async (e) => {
           </button>
 
 
-          <button className="seller-logout">
+          <button className="seller-logout" onClick={handleLogout}>
 
             <LogOut size={20} />
 
@@ -631,7 +440,7 @@ const handleUpdateProduct = async (e) => {
 
                   <p>Total Sales</p>
 
-                  <h2>Rs. 0</h2>
+                  <h2>Rs. {totalSales.toLocaleString()}</h2>
 
                 </div>
 
@@ -648,7 +457,7 @@ const handleUpdateProduct = async (e) => {
 
                   <p>Total Orders</p>
 
-                  <h2>0</h2>
+                  <h2>{orders.length}</h2>
 
                 </div>
 
@@ -665,7 +474,9 @@ const handleUpdateProduct = async (e) => {
 
                   <p>Active Products</p>
 
-                  <h2>0</h2>
+                  <h2>
+                    {products.filter((p) => p.available).length}
+                  </h2>
 
                 </div>
 
@@ -684,13 +495,13 @@ const handleUpdateProduct = async (e) => {
 
                   <div className="rating-value">
 
-                    <h2>0.00</h2>
+                    <h2>{avgRating.toFixed(2)}</h2>
 
                     <span>/ 5.0</span>
 
                   </div>
 
-                  <small>0 reviews</small>
+                  <small>{reviews.length} reviews</small>
 
                 </div>
 
@@ -764,9 +575,8 @@ const handleUpdateProduct = async (e) => {
 
                   <button
   onClick={() => {
-    setEditingProductId(null);
     setActivePage("Products");
-    setShowProductForm(true);
+    setProductView({ mode: "add" });
   }}
 >
 
@@ -862,6 +672,40 @@ const handleUpdateProduct = async (e) => {
 
   <div className="seller-page">
 
+    {productView && (
+      <div className="seller-page-heading">
+        <div>
+          <h2>{productView.mode === "edit" ? "Edit Product" : "Add New Product"}</h2>
+          <p>
+            {productView.mode === "edit"
+              ? "Update the details of your product below."
+              : "List a new item in your catalog."}
+          </p>
+        </div>
+
+        <button
+          className="back-to-products-btn"
+          onClick={() => setProductView(null)}
+        >
+          <ArrowLeft size={16} />
+          Back to Products
+        </button>
+      </div>
+    )}
+
+    {productView && (
+      <ProductForm
+        key={productView.mode === "edit" ? productView.product._id : "add"}
+        mode={productView.mode}
+        productId={productView.product?._id}
+        initialProduct={productView.product}
+        onSuccess={handleProductFormSuccess}
+        onCancel={() => setProductView(null)}
+      />
+    )}
+
+    {!productView && (<>
+
     {/* PRODUCT HEADER */}
 
     <div className="seller-page-heading">
@@ -876,7 +720,7 @@ const handleUpdateProduct = async (e) => {
 
       <button
         className="primary-action"
-        onClick={() => setShowProductForm(true)}
+        onClick={() => setProductView({ mode: "add" })}
       >
         <PlusCircle size={18} />
         Add Product
@@ -939,292 +783,6 @@ const handleUpdateProduct = async (e) => {
     </div>
 
 
-    {/* ==================================================
-        ADD PRODUCT FORM
-    ================================================== */}
-
-    {showProductForm && (
-
-      <div className="product-form-card">
-
-        <div className="product-form-header">
-
-          <div>
-            <h3>
-  {editingProductId ? "Edit Product" : "Add New Product"}
-</h3>
-
-            <p>
-  {editingProductId
-    ? "Update the details of your product below."
-    : "Add the details of your product below."}
-</p>
-          </div>
-
-          <button
-  className="close-product-form"
-  onClick={() => {
-    setEditingProductId(null);
-    setShowProductForm(false);
-  }}
->
-  ×
-</button>
-
-        </div>
-
-
-        <form
-  onSubmit={
-    editingProductId
-      ? handleUpdateProduct
-      : handleAddProduct
-  }
->
-
-          {/* PRODUCT NAME */}
-
-          <div className="product-form-group">
-
-            <label>Product Name</label>
-
-            <input
-              type="text"
-              name="name"
-              placeholder="Enter product name"
-              value={productForm.name}
-              onChange={handleProductChange}
-              required
-            />
-
-          </div>
-
-
-          {/* CATEGORY */}
-
-          <div className="product-form-group">
-
-            <label>Category</label>
-
-            <select
-              name="category"
-              value={productForm.category}
-              onChange={handleProductChange}
-              required
-            >
-
-              <option value="">
-                Select category
-              </option>
-
-              <option value="Dresses">
-                Dresses
-              </option>
-
-              <option value="Tops">
-                Tops
-              </option>
-
-              <option value="Bottoms">
-                Bottoms
-              </option>
-
-              <option value="Formals">
-                Formals
-              </option>
-
-              <option value="Shoes">
-                Shoes
-              </option>
-
-              <option value="Accessories">
-                Accessories
-              </option>
-
-            </select>
-
-          </div>
-
-
-          {/* DESCRIPTION */}
-
-          <div className="product-form-group">
-
-            <label>Description</label>
-
-            <textarea
-              name="description"
-              placeholder="Enter product description"
-              value={productForm.description}
-              onChange={handleProductChange}
-              rows="4"
-              required
-            />
-
-          </div>
-
-
-          {/* PRICE + STOCK */}
-
-          <div className="product-form-row">
-
-            <div className="product-form-group">
-
-              <label>Price (Rs.)</label>
-
-              <input
-                type="number"
-                name="price"
-                placeholder="Enter price"
-                min="0"
-                value={productForm.price}
-                onChange={handleProductChange}
-                required
-              />
-
-            </div>
-
-
-            <div className="product-form-group">
-
-              <label>Stock Quantity</label>
-
-              <input
-                type="number"
-                name="stock"
-                placeholder="Enter stock quantity"
-                min="0"
-                value={productForm.stock}
-                onChange={handleProductChange}
-                required
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* PRODUCT IMAGE */}
-
-          <div className="product-form-group">
-
-            <label>Product Image</label>
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-             required={!editingProductId}
-            />
-
-            {productForm.image && (
-
-              <div className="image-preview">
-
-                <img
-                  src={productForm.image}
-                  alt="Product preview"
-                />
-
-              </div>
-
-            )}
-
-          </div>
-
-
-          {/* SIZE + COLOR */}
-
-          <div className="product-form-row">
-
-            <div className="product-form-group">
-
-              <label>Size</label>
-
-              <input
-                type="text"
-                name="size"
-                placeholder="e.g. S, M, L, XL"
-                value={productForm.size}
-                onChange={handleProductChange}
-              />
-
-            </div>
-
-
-            <div className="product-form-group">
-
-              <label>Color</label>
-
-              <input
-                type="text"
-                name="color"
-                placeholder="e.g. Black, White"
-                value={productForm.color}
-                onChange={handleProductChange}
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* PRODUCT STATUS */}
-
-          <div className="product-form-group">
-
-            <label>Product Status</label>
-
-            <select
-              name="status"
-              value={productForm.status}
-              onChange={handleProductChange}
-            >
-
-              <option value="Active">
-                Active
-              </option>
-
-              <option value="Inactive">
-                Inactive
-              </option>
-
-            </select>
-
-          </div>
-
-
-          {/* FORM BUTTONS */}
-
-          <div className="product-form-actions">
-
-            <button
-              type="button"
-              className="cancel-product-button"
-              onClick={() => {
-  setEditingProductId(null);
-  setShowProductForm(false);
-}}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="save-product-button"
-            >
-              <PlusCircle size={18} />
-                {editingProductId ? "Update Product" : "Add Product"}
-            </button>
-
-          </div>
-
-        </form>
-
-      </div>
-
-    )}
-
 
     {/* ==================================================
         PRODUCT TABLE
@@ -1264,7 +822,7 @@ const handleUpdateProduct = async (e) => {
 
           <button
             className="primary-action"
-            onClick={() => setShowProductForm(true)}
+            onClick={() => setProductView({ mode: "add" })}
           >
             <PlusCircle size={18} />
             Add Product
@@ -1310,7 +868,7 @@ const handleUpdateProduct = async (e) => {
 
                 return (
 
-                  <tr key={product.id}>
+                  <tr key={product._id}>
 
                     {/* IMAGE */}
 
@@ -1358,7 +916,21 @@ const handleUpdateProduct = async (e) => {
                     {/* PRICE */}
 
                     <td>
-                      Rs. {product.price.toLocaleString()}
+                      {product.discountType && product.discountType !== "none" && product.discountValue > 0 ? (
+                        <div className="price-with-discount">
+                          <strong>Rs. {product.finalPrice?.toLocaleString()}</strong>
+                          <span className="price-strike">
+                            Rs. {product.price.toLocaleString()}
+                          </span>
+                          <span className="discount-chip">
+                            {product.discountType === "percentage"
+                              ? `${product.discountValue}% OFF`
+                              : `Rs.${product.discountValue} OFF`}
+                          </span>
+                        </div>
+                      ) : (
+                        `Rs. ${product.price.toLocaleString()}`
+                      )}
                     </td>
 
 
@@ -1405,7 +977,7 @@ const handleUpdateProduct = async (e) => {
                     <td>
   <button
     className="edit-product-button"
-    onClick={() => handleEditProduct(product)}
+    onClick={() => setProductView({ mode: "edit", product })}
   >
     Edit
   </button>
@@ -1434,6 +1006,8 @@ const handleUpdateProduct = async (e) => {
 
     </div>
 
+    </>)}
+
   </div>
 
 )}
@@ -1444,7 +1018,6 @@ const handleUpdateProduct = async (e) => {
 
           {activePage === "Orders" && (
 
-           
   <div className="seller-page">
 
     <div className="seller-page-heading">
@@ -1454,15 +1027,27 @@ const handleUpdateProduct = async (e) => {
       </div>
     </div>
 
-    <div className="orders-table-card">
-
-      <div className="orders-table-header">
-        <div>
-          <h3>Recent Orders</h3>
-          <p>Orders placed by customers in your store.</p>
-        </div>
+    {!ordersLoading && orders.length > 0 && (
+      <div className="order-status-summary">
+        {["pending", "processing", "shipped", "delivered", "cancelled"].map(
+          (status) => {
+            const count = allItems.filter((i) => i.status === status).length;
+            return (
+              <div className={`order-status-chip status-${status}`} key={status}>
+                <span className="order-status-count">{count}</span>
+                <span className="order-status-label">{status}</span>
+              </div>
+            );
+          }
+        )}
       </div>
+    )}
 
+    {ordersLoading ? (
+      <div className="orders-empty-state">
+        <p>Loading orders...</p>
+      </div>
+    ) : orders.length === 0 ? (
       <div className="orders-empty-state">
         <ShoppingCart size={45} />
 
@@ -1473,8 +1058,79 @@ const handleUpdateProduct = async (e) => {
           purchase your products.
         </p>
       </div>
+    ) : (
+      <div className="seller-orders-list">
+        {orders.map((order) => (
+          <div className="seller-order-card" key={order._id}>
 
-    </div>
+            <div className="seller-order-header">
+              <div>
+                <strong>#{order._id.slice(-6).toUpperCase()}</strong>
+                <span className="seller-order-date">
+                  {new Date(order.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="seller-order-customer">
+                <span>{order.customer?.name}</span>
+                <small>{order.customer?.phone || order.customer?.email}</small>
+              </div>
+
+              <span
+                className={`seller-order-payment ${
+                  order.paymentStatus === "paid" ? "paid" : "pending"
+                }`}
+              >
+                {order.paymentStatus}
+              </span>
+            </div>
+
+            <div className="seller-order-items">
+              {order.items.map((item) => (
+                <div className="seller-order-item" key={item._id}>
+
+                  <img
+                    src={item.product?.image}
+                    alt={item.product?.name}
+                  />
+
+                  <div className="seller-order-item-info">
+                    <p>{item.product?.name}</p>
+                    <span>
+                      Qty {item.quantity} · Rs. {item.price * item.quantity}
+                    </span>
+                  </div>
+
+                  <span className={`order-item-status-pill status-${item.status}`}>
+                    {item.status}
+                  </span>
+
+                  <select
+                    className="order-item-status-select"
+                    value={item.status}
+                    onChange={(e) =>
+                      handleItemStatusChange(
+                        order._id,
+                        item._id,
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+
+                </div>
+              ))}
+            </div>
+
+          </div>
+        ))}
+      </div>
+    )}
 
   </div>
 )}
@@ -1504,7 +1160,7 @@ const handleUpdateProduct = async (e) => {
 
         <div>
           <p>Total Earnings</p>
-          <h3>Rs. 0</h3>
+          <h3>Rs. {totalEarnings.toLocaleString()}</h3>
         </div>
       </div>
 
@@ -1515,7 +1171,7 @@ const handleUpdateProduct = async (e) => {
 
         <div>
           <p>Pending Payment</p>
-          <h3>Rs. 0</h3>
+          <h3>Rs. {pendingEarnings.toLocaleString()}</h3>
         </div>
       </div>
 
@@ -1542,16 +1198,51 @@ const handleUpdateProduct = async (e) => {
         </div>
       </div>
 
-      <div className="payments-empty-state">
-        <CreditCard size={45} />
+      {allItems.length === 0 ? (
+        <div className="payments-empty-state">
+          <CreditCard size={45} />
 
-        <h3>No Payments Yet</h3>
+          <h3>No Payments Yet</h3>
 
-        <p>
-          Your payment history will appear here after
-          customers purchase your products.
-        </p>
-      </div>
+          <p>
+            Your payment history will appear here after
+            customers purchase your products.
+          </p>
+        </div>
+      ) : (
+        <div className="products-table-wrapper">
+          <table className="products-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Product</th>
+                <th>Amount</th>
+                <th>Payment Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allItems.map((item) => (
+                <tr key={item._id}>
+                  <td>#{item.order._id.slice(-6).toUpperCase()}</td>
+                  <td>{item.product?.name}</td>
+                  <td>Rs. {item.price * item.quantity}</td>
+                  <td>
+                    <span
+                      className={`product-status ${
+                        item.order.paymentStatus === "paid"
+                          ? "active"
+                          : "inactive"
+                      }`}
+                    >
+                      {item.order.paymentStatus}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
     </div>
 
@@ -1577,60 +1268,40 @@ const handleUpdateProduct = async (e) => {
     <div className="reviews-summary-card">
 
       <div className="overall-rating">
-        <h3>0.0</h3>
+        <h3>{avgRating.toFixed(1)}</h3>
 
         <div className="rating-stars">
-          <Star size={20} />
-          <Star size={20} />
-          <Star size={20} />
-          <Star size={20} />
-          <Star size={20} />
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star
+              key={n}
+              size={20}
+              fill={n <= Math.round(avgRating) ? "#f5b942" : "none"}
+              color="#f5b942"
+            />
+          ))}
         </div>
 
-        <p>No ratings yet</p>
+        <p>{reviews.length === 0 ? "No ratings yet" : `${reviews.length} ratings`}</p>
       </div>
 
       <div className="rating-breakdown">
 
-        <div className="rating-row">
-          <span>5 Stars</span>
-          <div className="rating-bar">
-            <div className="rating-bar-fill" style={{ width: "0%" }}></div>
+        {[5, 4, 3, 2, 1].map((star, i) => (
+          <div className="rating-row" key={star}>
+            <span>{star} Stars</span>
+            <div className="rating-bar">
+              <div
+                className="rating-bar-fill"
+                style={{
+                  width: reviews.length
+                    ? `${(ratingCounts[i] / reviews.length) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+            <span>{ratingCounts[i]}</span>
           </div>
-          <span>0</span>
-        </div>
-
-        <div className="rating-row">
-          <span>4 Stars</span>
-          <div className="rating-bar">
-            <div className="rating-bar-fill" style={{ width: "0%" }}></div>
-          </div>
-          <span>0</span>
-        </div>
-
-        <div className="rating-row">
-          <span>3 Stars</span>
-          <div className="rating-bar">
-            <div className="rating-bar-fill" style={{ width: "0%" }}></div>
-          </div>
-          <span>0</span>
-        </div>
-
-        <div className="rating-row">
-          <span>2 Stars</span>
-          <div className="rating-bar">
-            <div className="rating-bar-fill" style={{ width: "0%" }}></div>
-          </div>
-          <span>0</span>
-        </div>
-
-        <div className="rating-row">
-          <span>1 Star</span>
-          <div className="rating-bar">
-            <div className="rating-bar-fill" style={{ width: "0%" }}></div>
-          </div>
-          <span>0</span>
-        </div>
+        ))}
 
       </div>
 
@@ -1646,16 +1317,41 @@ const handleUpdateProduct = async (e) => {
         </div>
       </div>
 
-      <div className="reviews-empty-state">
-        <Star size={45} />
+      {reviews.length === 0 ? (
+        <div className="reviews-empty-state">
+          <Star size={45} />
 
-        <h3>No Reviews Yet</h3>
+          <h3>No Reviews Yet</h3>
 
-        <p>
-          Customer reviews will appear here after customers
-          purchase and review your products.
-        </p>
-      </div>
+          <p>
+            Customer reviews will appear here after customers
+            purchase and review your products.
+          </p>
+        </div>
+      ) : (
+        <div className="products-table-wrapper">
+          <table className="products-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Customer</th>
+                <th>Rating</th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reviews.map((review) => (
+                <tr key={review._id}>
+                  <td>{review.product?.name}</td>
+                  <td>{review.customer?.name}</td>
+                  <td>{"★".repeat(review.rating)}</td>
+                  <td>{review.comment || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
     </div>
 

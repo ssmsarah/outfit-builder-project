@@ -1,52 +1,30 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Store as StoreIcon } from "lucide-react";
+import api from "../../../api/axios";
 import "./Stores.css";
 
-import zara from "../../../assets/zara.jpg";
-import nike from "../../../assets/nike.jpg";
-import hm from "../../../assets/hm.jpg";
-import adidas from "../../../assets/adidas.jpg";
-import gucci from "../../../assets/gucci.jpg";
-import lv from "../../../assets/lv.jpg";
-
-const stores = [
-  {
-    id: 1,
-    name: "Zara",
-    logo: zara,
-    description: "Modern fashion and everyday essentials.",
-  },
-  {
-    id: 2,
-    name: "Nike",
-    logo: nike,
-    description: "Sportswear, shoes and lifestyle products.",
-  },
-  {
-    id: 3,
-    name: "H&M",
-    logo: hm,
-    description: "Affordable fashion for every style.",
-  },
-  {
-    id: 4,
-    name: "Adidas",
-    logo: adidas,
-    description: "Sportswear and casual fashion.",
-  },
-  {
-    id: 5,
-    name: "Gucci",
-    logo: gucci,
-    description: "Luxury fashion and accessories.",
-  },
-  {
-    id: 6,
-    name: "Louis Vuitton",
-    logo: lv,
-    description: "Luxury fashion, bags and accessories.",
-  },
-];
-
 const Stores = () => {
+  const navigate = useNavigate();
+
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const { data } = await api.get("/stores");
+        setStores(data);
+      } catch (error) {
+        console.error("Stores error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStores();
+  }, []);
+
   return (
     <div className="stores-page">
 
@@ -54,33 +32,42 @@ const Stores = () => {
         <h1>Our Stores</h1>
 
         <p>
-          Explore collections from your favorite brands
+          Explore collections from registered sellers
           and discover new styles.
         </p>
       </div>
 
-      <div className="stores-grid">
-        {stores.map((store) => (
-          <div className="store-page-card" key={store.id}>
+      {loading ? (
+        <p className="stores-status">Loading stores...</p>
+      ) : stores.length === 0 ? (
+        <p className="stores-status">
+          No stores are registered yet. Check back soon!
+        </p>
+      ) : (
+        <div className="stores-grid">
+          {stores.map((store) => (
+            <div className="store-page-card" key={store.id}>
 
-            <div className="store-page-logo">
-              <img
-                src={store.logo}
-                alt={store.name}
-              />
+              <div className="store-page-logo">
+                <StoreIcon size={42} strokeWidth={1.5} color="#d95d81" />
+              </div>
+
+              <h2>{store.storeName}</h2>
+
+              <p>
+                {store.address || "Shoppea Seller"} ·{" "}
+                {store.productCount}{" "}
+                {store.productCount === 1 ? "product" : "products"}
+              </p>
+
+              <button onClick={() => navigate(`/stores/${store.id}`)}>
+                Explore Store →
+              </button>
+
             </div>
-
-            <h2>{store.name}</h2>
-
-            <p>{store.description}</p>
-
-            <button>
-              Explore Store →
-            </button>
-
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );
