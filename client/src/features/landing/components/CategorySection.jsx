@@ -6,28 +6,12 @@ import tops from "../../../assets/tops.jpg";
 import bottoms from "../../../assets/bottoms.jpg";
 
 import { Link } from "react-router-dom";
+import { ArrowUpRight, Grid3x3 } from "lucide-react";
 
-const categories = [
-  {
-    id: 1,
-    name: "Dresses",
-    image: dresses,
-  },
-  {
-    id: 2,
-    name: "Formals",
-    image: formals,
-  },
-  {
-    id: 3,
-    name: "Tops",
-    image: tops,
-  },
-  {
-    id: 4,
-    name: "Bottoms",
-    image: bottoms,
-  },
+const smallCategories = [
+  { id: 2, name: "Formals", image: formals },
+  { id: 3, name: "Tops", image: tops },
+  { id: 4, name: "Bottoms", image: bottoms },
 ];
 
 const CategorySection = () => {
@@ -40,28 +24,38 @@ const CategorySection = () => {
         Find your favorite fashion pieces from every category.
       </p>
 
-      <div className="category-grid">
+      <div className="category-mosaic">
 
-        {categories.map((category) => (
-          <div className="category-card" key={category.id}>
-
-            <img
-              src={category.image}
-              alt={category.name}
-            />
-
-            <h3>{category.name}</h3>
-
+        <Link to="/category/dresses" className="mosaic-tile mosaic-tile-large">
+          <img src={dresses} alt="Dresses" />
+          <div className="mosaic-overlay">
+            <span>Dresses</span>
+            <ArrowUpRight size={18} />
           </div>
-        ))}
-
-      </div>
-
-      <div className="category-btn">
-
-        <Link to="/categories">
-          View All Categories →
         </Link>
+
+        <div className="mosaic-small-grid">
+
+          {smallCategories.map((category) => (
+            <Link
+              to={`/category/${category.name.toLowerCase()}`}
+              className="mosaic-tile"
+              key={category.id}
+            >
+              <img src={category.image} alt={category.name} />
+              <div className="mosaic-overlay">
+                <span>{category.name}</span>
+                <ArrowUpRight size={16} />
+              </div>
+            </Link>
+          ))}
+
+          <Link to="/categories" className="mosaic-tile mosaic-tile-viewall">
+            <Grid3x3 size={26} />
+            <span>View All Categories</span>
+          </Link>
+
+        </div>
 
       </div>
 

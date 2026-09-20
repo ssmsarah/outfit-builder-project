@@ -1,15 +1,23 @@
+import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Heart,
   ShoppingBag,
   LogOut,
+  Search,
+  Store,
+  Package,
+  PackageSearch,
 } from "lucide-react";
 
 import logo from "../../../assets/shopea.png";
+import { useCart } from "../../../context/CartContext";
+import { useWishlist } from "../../../context/WishlistContext";
 import "./Navbar.css";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -22,11 +30,25 @@ const Navbar = () => {
   const firstName =
     user?.name?.split(" ")[0] || "Sarah";
 
+  const cart = useCart();
+  const wishlist = useWishlist();
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
+    cart?.refresh();
+    wishlist?.refresh();
+
     navigate("/");
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   return (
@@ -36,15 +58,17 @@ const Navbar = () => {
 
         <Link
           to="/seller"
-          className="top-link"
+          className="top-link top-link-outline"
         >
+          <Store size={13} strokeWidth={2} />
           Sell on Shoppea
         </Link>
 
         <Link
           to="/seller/register"
-          className="top-link"
+          className="top-link top-link-solid"
         >
+          <PackageSearch size={13} strokeWidth={2} />
           Become a Seller
         </Link>
 
@@ -75,12 +99,17 @@ const Navbar = () => {
           </div>
 
           {/* SEARCH */}
-          <div className="search-box">
+          <form className="search-box" onSubmit={handleSearchSubmit}>
             <input
               type="text"
               placeholder="Search Products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
+            <button type="submit" className="search-submit-btn" aria-label="Search">
+              <Search size={16} strokeWidth={2} />
+            </button>
+          </form>
 
           {/* ================= CUSTOMER ACTIONS ================= */}
 
@@ -102,6 +131,17 @@ const Navbar = () => {
                 Hello, {firstName}
               </span>
 
+              {/* My Orders */}
+              <button
+                type="button"
+                className="customer-icon-btn"
+                onClick={() => navigate("/my-orders")}
+                title="My Orders"
+                aria-label="My Orders"
+              >
+                <Package size={19} strokeWidth={1.9} />
+              </button>
+
               {/* Wishlist */}
               <button
                 type="button"
@@ -110,7 +150,12 @@ const Navbar = () => {
                 title="Wishlist"
                 aria-label="Wishlist"
               >
-                <Heart size={17} strokeWidth={1.8} />
+                <Heart size={19} strokeWidth={1.9} />
+                {wishlist?.items?.length > 0 && (
+                  <span className="icon-badge">
+                    {wishlist.items.length}
+                  </span>
+                )}
               </button>
 
               {/* Cart */}
@@ -121,7 +166,10 @@ const Navbar = () => {
                 title="Cart"
                 aria-label="Shopping Cart"
               >
-                <ShoppingBag size={17} strokeWidth={1.8} />
+                <ShoppingBag size={19} strokeWidth={1.9} />
+                {cart?.count > 0 && (
+                  <span className="icon-badge">{cart.count}</span>
+                )}
               </button>
 
               {/* Logout */}

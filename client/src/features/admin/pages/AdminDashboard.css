@@ -159,7 +159,36 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 20px;
   padding: 0 30px;
+}
+
+.admin-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  padding: 9px 15px;
+
+  background: white;
+  color: #374151;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-logout-btn:hover {
+  background: #fdf1f4;
+  border-color: #e995a6;
+  color: #c84e72;
+  transform: translateY(-1px);
 }
 
 .admin-profile {

@@ -22,6 +22,12 @@
   color: #666;
 }
 
+.stores-status {
+  text-align: center;
+  color: #777;
+  font-size: 15px;
+}
+
 /* Grid */
 
 .stores-grid {
