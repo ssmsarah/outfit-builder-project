@@ -567,22 +567,20 @@ const handleUpdateProduct = async (e) => {
         <header className="seller-header">
 
           <h1>{activePage}</h1>
+<div className="seller-user">
 
-          <div className="seller-user">
+  <div className="seller-user-avatar">
+    {user?.storeName?.charAt(0).toUpperCase() || "S"}
+  </div>
 
-            <div className="seller-user-avatar">
-              S
-            </div>
+  <div>
+    <strong>{user?.storeName || "Seller"}</strong>
+    <span>Shoppea</span>
+  </div>
 
-            <div>
+</div>
 
-              <strong>Seller</strong>
-
-              <span>Shoppea Store</span>
-
-            </div>
-
-          </div>
+          
 
         </header>
 
