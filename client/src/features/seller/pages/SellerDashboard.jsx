@@ -379,11 +379,11 @@ const handleChangePassword = () => {
 <div className="seller-user">
 
   <div className="seller-user-avatar">
-    {user?.storeName?.charAt(0).toUpperCase() || "S"}
+    {profileData?.storeName?.charAt(0).toUpperCase() || "S"}
   </div>
 
   <div>
-    <strong>{user?.storeName || "Seller"}</strong>
+    <strong>{profileData?.storeName || "Seller"}</strong>
     <span>Shoppea</span>
   </div>
 
