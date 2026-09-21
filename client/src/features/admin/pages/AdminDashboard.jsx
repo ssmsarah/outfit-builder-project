@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -10,10 +11,20 @@ import {
   ChevronUp,
   ChevronDown,
   Menu,
+  LogOut,
 } from "lucide-react";
+import api from "../../../api/axios";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/admin/login");
+  };
+
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalSellers: 0,
@@ -26,6 +37,15 @@ const AdminDashboard = () => {
   const [sellers, setSellers] = useState([]);
   const [loadingSellers, setLoadingSellers] = useState(false);
 
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   const [openSales, setOpenSales] = useState(true);
   const [openCatalog, setOpenCatalog] = useState(true);
   const [openUsers, setOpenUsers] = useState(true);
@@ -33,17 +53,7 @@ const AdminDashboard = () => {
   const fetchSellers = async () => {
     try {
       setLoadingSellers(true);
-
-      const response = await fetch(
-        "http://localhost:5000/api/admin/sellers"
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch sellers");
-      }
-
+      const { data } = await api.get("/admin/sellers");
       setSellers(data);
     } catch (error) {
       console.error("Sellers error:", error);
@@ -54,67 +64,100 @@ const AdminDashboard = () => {
 
   const handleApproveSeller = async (id) => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/admin/sellers/${id}/approve`,
-        {
-          method: "PATCH",
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to approve seller");
-      }
-
+      await api.patch(`/admin/sellers/${id}/approve`);
       alert("Seller approved successfully!");
-
       fetchSellers();
     } catch (error) {
       console.error("Approve seller error:", error);
-      alert(error.message);
+      alert(error.response?.data?.message || "Failed to approve seller");
     }
   };
 
   const handleRejectSeller = async (id) => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/admin/sellers/${id}/reject`,
-        {
-          method: "PATCH",
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to reject seller");
-      }
-
+      await api.patch(`/admin/sellers/${id}/reject`);
       alert("Seller rejected successfully!");
-
       fetchSellers();
     } catch (error) {
       console.error("Reject seller error:", error);
-      alert(error.message);
+      alert(error.response?.data?.message || "Failed to reject seller");
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const { data } = await api.get("/admin/users");
+      setUsers(data);
+    } catch (error) {
+      console.error("Users error:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleToggleBlock = async (id) => {
+    try {
+      await api.patch(`/admin/users/${id}/block`);
+      fetchUsers();
+    } catch (error) {
+      console.error("Toggle block error:", error);
+      alert(error.response?.data?.message || "Failed to update user");
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const { data } = await api.get("/admin/orders");
+      setOrders(data);
+    } catch (error) {
+      console.error("Orders error:", error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleUpdatePayment = async (orderId, paymentStatus) => {
+    try {
+      await api.patch(`/admin/orders/${orderId}/payment`, {
+        paymentStatus,
+      });
+      fetchOrders();
+    } catch (error) {
+      console.error("Update payment error:", error);
+      alert(error.response?.data?.message || "Failed to update payment");
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const { data } = await api.get("/admin/products");
+      setProducts(data);
+    } catch (error) {
+      console.error("Products error:", error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleAdminDeleteProduct = async (id) => {
+    if (!window.confirm("Remove this product from the marketplace?")) return;
+
+    try {
+      await api.delete(`/admin/products/${id}`);
+      fetchProducts();
+    } catch (error) {
+      console.error("Delete product error:", error);
+      alert(error.response?.data?.message || "Failed to remove product");
     }
   };
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:5000/api/admin/stats"
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch statistics"
-          );
-        }
-
+        const { data } = await api.get("/admin/stats");
         setStats(data);
       } catch (error) {
         console.error("Dashboard stats error:", error);
@@ -127,50 +170,356 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeSection === "sellers") {
       fetchSellers();
+    } else if (activeSection === "users") {
+      fetchUsers();
+    } else if (activeSection === "orders" || activeSection === "payments") {
+      fetchOrders();
+    } else if (activeSection === "products" || activeSection === "categories") {
+      fetchProducts();
     }
   }, [activeSection]);
 
-  
+
 
   const renderContent = () => {
     switch (activeSection) {
       case "orders":
         return (
           <div className="section-content">
-            <h1>Orders</h1>
-            <p>Manage customer orders here.</p>
+            <div className="section-header">
+              <div>
+                <h1>Orders</h1>
+                <p>All orders placed across the marketplace.</p>
+              </div>
+            </div>
+
+            <div className="seller-table-card">
+              {loadingOrders ? (
+                <div className="seller-loading">Loading orders...</div>
+              ) : orders.length === 0 ? (
+                <div className="seller-empty">
+                  <ShoppingCart size={45} />
+                  <h3>No Orders Yet</h3>
+                  <p>Orders will appear here once customers start buying.</p>
+                </div>
+              ) : (
+                <div className="seller-table-wrapper">
+                  <table className="seller-table">
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order._id}>
+                          <td>#{order._id.slice(-6).toUpperCase()}</td>
+                          <td>{order.customer?.name}</td>
+                          <td>{order.items.length}</td>
+                          <td>Rs. {order.totalAmount}</td>
+                          <td>
+                            <span
+                              className={`seller-status ${
+                                order.paymentStatus === "paid"
+                                  ? "approved"
+                                  : "pending"
+                              }`}
+                            >
+                              {order.paymentStatus}
+                            </span>
+                          </td>
+                          <td>
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         );
 
-      case "payments":
+      case "payments": {
+        const totalRevenue = orders
+          .filter((o) => o.paymentStatus === "paid")
+          .reduce((sum, o) => sum + o.totalAmount, 0);
+
+        const pendingPayments = orders.filter(
+          (o) => o.paymentStatus !== "paid"
+        );
+
         return (
           <div className="section-content">
-            <h1>Payments</h1>
-            <p>Manage payment transactions here.</p>
+            <div className="section-header">
+              <div>
+                <h1>Payments</h1>
+                <p>Track and override payment status across orders.</p>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <CreditCard size={24} />
+                </div>
+                <div>
+                  <p>Total Revenue Collected</p>
+                  <h2>Rs. {totalRevenue.toLocaleString()}</h2>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <CreditCard size={24} />
+                </div>
+                <div>
+                  <p>Orders Awaiting Payment</p>
+                  <h2>{pendingPayments.length}</h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="seller-table-card">
+              {loadingOrders ? (
+                <div className="seller-loading">Loading payments...</div>
+              ) : orders.length === 0 ? (
+                <div className="seller-empty">
+                  <CreditCard size={45} />
+                  <h3>No Payments Yet</h3>
+                </div>
+              ) : (
+                <div className="seller-table-wrapper">
+                  <table className="seller-table">
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order._id}>
+                          <td>#{order._id.slice(-6).toUpperCase()}</td>
+                          <td>{order.customer?.name}</td>
+                          <td>Rs. {order.totalAmount}</td>
+                          <td>
+                            <span
+                              className={`seller-status ${
+                                order.paymentStatus === "paid"
+                                  ? "approved"
+                                  : "pending"
+                              }`}
+                            >
+                              {order.paymentStatus}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              value={order.paymentStatus}
+                              onChange={(e) =>
+                                handleUpdatePayment(order._id, e.target.value)
+                              }
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="paid">Paid</option>
+                              <option value="failed">Failed</option>
+                              <option value="refunded">Refunded</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         );
+      }
 
       case "products":
         return (
           <div className="section-content">
-            <h1>Products</h1>
-            <p>Manage products here.</p>
+            <div className="section-header">
+              <div>
+                <h1>Products</h1>
+                <p>Moderate products listed across all stores.</p>
+              </div>
+            </div>
+
+            <div className="seller-table-card">
+              {loadingProducts ? (
+                <div className="seller-loading">Loading products...</div>
+              ) : products.length === 0 ? (
+                <div className="seller-empty">
+                  <Package size={45} />
+                  <h3>No Products Yet</h3>
+                </div>
+              ) : (
+                <div className="seller-table-wrapper">
+                  <table className="seller-table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Store</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map((product) => (
+                        <tr key={product._id}>
+                          <td>{product.name}</td>
+                          <td>{product.store}</td>
+                          <td>{product.category}</td>
+                          <td>Rs. {product.price}</td>
+                          <td>{product.stock}</td>
+                          <td>
+                            <span
+                              className={`seller-status ${
+                                product.available ? "approved" : "rejected"
+                              }`}
+                            >
+                              {product.available ? "active" : "inactive"}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className="reject-button"
+                              onClick={() =>
+                                handleAdminDeleteProduct(product._id)
+                              }
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         );
 
-      case "categories":
+      case "categories": {
+        const categoryOrder = [
+          "dresses",
+          "formals",
+          "tops",
+          "bottoms",
+          "shoes",
+          "accessories",
+        ];
+
+        const counts = categoryOrder.map(
+          (cat) => products.filter((p) => p.category === cat).length
+        );
+
         return (
           <div className="section-content">
-            <h1>Categories</h1>
-            <p>Manage product categories here.</p>
+            <div className="section-header">
+              <div>
+                <h1>Categories</h1>
+                <p>Product distribution across categories.</p>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              {categoryOrder.map((cat, i) => (
+                <div className="stat-card" key={cat}>
+                  <div className="stat-icon">
+                    <Tags size={24} />
+                  </div>
+                  <div>
+                    <p style={{ textTransform: "capitalize" }}>{cat}</p>
+                    <h2>{counts[i]}</h2>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         );
+      }
 
       case "users":
         return (
           <div className="section-content">
-            <h1>Users</h1>
-            <p>Manage registered users here.</p>
+            <div className="section-header">
+              <div>
+                <h1>Users</h1>
+                <p>Manage registered customer accounts.</p>
+              </div>
+            </div>
+
+            <div className="seller-table-card">
+              {loadingUsers ? (
+                <div className="seller-loading">Loading users...</div>
+              ) : users.length === 0 ? (
+                <div className="seller-empty">
+                  <Users size={45} />
+                  <h3>No Users Found</h3>
+                </div>
+              ) : (
+                <div className="seller-table-wrapper">
+                  <table className="seller-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u._id}>
+                          <td>{u.name}</td>
+                          <td>{u.email}</td>
+                          <td>{u.phone || "-"}</td>
+                          <td>
+                            <span
+                              className={`seller-status ${
+                                u.isBlocked ? "rejected" : "approved"
+                              }`}
+                            >
+                              {u.isBlocked ? "blocked" : "active"}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className={
+                                u.isBlocked
+                                  ? "approve-button"
+                                  : "reject-button"
+                              }
+                              onClick={() => handleToggleBlock(u._id)}
+                            >
+                              {u.isBlocked ? "Unblock" : "Block"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -529,6 +878,11 @@ const AdminDashboard = () => {
               <span>Administrator</span>
             </div>
           </div>
+
+          <button className="admin-logout-btn" onClick={handleLogout}>
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
         </div>
 
         {renderContent()}

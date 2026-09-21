@@ -31,6 +31,16 @@
 .brand-card{
     width:160px;
     text-align:center;
+
+    transition: transform .25s ease;
+}
+
+.brand-card:hover{
+    transform: translateY(-3px);
+}
+
+.brand-card:hover p{
+    color: #d95d81;
 }
 
 /* Circle */
@@ -67,6 +77,8 @@
     margin-top:15px;
     color:#444;
     font-weight:600;
+
+    transition: color .25s ease;
 }
 
 /* Arrows */

@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../../assets/shopea.png";
 import googleLogo from "../../../assets/google.png";
+import { useCart } from "../../../context/CartContext";
+import { useWishlist } from "../../../context/WishlistContext";
 import "./Auth.css";
 
 const Login = () => {
   const navigate = useNavigate();
+  const cart = useCart();
+  const wishlist = useWishlist();
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -58,6 +62,9 @@ const Login = () => {
           JSON.stringify(data.user)
         );
       }
+
+      cart?.refresh();
+      wishlist?.refresh();
 
       navigate("/home");
     } catch (err) {
