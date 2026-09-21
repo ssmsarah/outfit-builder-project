@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { useWishlist } from "../../../context/WishlistContext";
 import { useCart } from "../../../context/CartContext";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import "../../cart/pages/Cart.css";
 import "./Wishlist.css";
 
@@ -44,7 +45,7 @@ const Wishlist = () => {
             <div className="wishlist-card" key={product._id}>
 
               <img
-                src={product.image}
+                src={getImageUrl(product.image)}
                 alt={product.name}
                 onClick={() => navigate(`/product/${product._id}`)}
               />

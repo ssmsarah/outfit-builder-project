@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useToast } from "../context/ToastContext";
+import { getImageUrl } from "../utils/getImageUrl";
 import "../features/landing/components/ExclusiveOffers.css";
 
 const ProductCard = ({ product }) => {
@@ -74,7 +75,7 @@ const ProductCard = ({ product }) => {
     >
 
       <div className="product-image">
-        <img src={product.image} alt={product.name} />
+        <img src={getImageUrl(product.image)} alt={product.name} />
 
         {hasDiscount && (
           <span className="discount-badge">

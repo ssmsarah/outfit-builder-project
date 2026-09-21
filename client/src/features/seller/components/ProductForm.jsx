@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PlusCircle } from "lucide-react";
 import api from "../../../api/axios";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import "../pages/SellerDashboard.css";
 
 const emptyForm = {
@@ -232,7 +233,7 @@ const ProductForm = ({ mode, productId, initialProduct, onSuccess, onCancel }) =
 
           {form.image && (
             <div className="image-preview">
-              <img src={form.image} alt="Product preview" />
+              <img src={getImageUrl(form.image)} alt="Product preview" />
             </div>
           )}
         </div>

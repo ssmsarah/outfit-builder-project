@@ -3,7 +3,7 @@ export const uploadImage = (req, res) => {
     return res.status(400).json({ message: "No image file provided" });
   }
 
-  const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+  const imageUrl = `/uploads/${req.file.filename}`;
 
   res.status(201).json({ imageUrl });
 };
