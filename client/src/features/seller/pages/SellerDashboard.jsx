@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   TrendingUp,
 } from "lucide-react";
+import { getImageUrl } from "../../../utils/getImageUrl";
 
 import logo from "../../../assets/shopea.png";
 import api from "../../../api/axios";
@@ -877,7 +878,7 @@ const handleChangePassword = () => {
                         {product.image ? (
 
                           <img
-                            src={product.image}
+                            src={getImageUrl(product.image)}
                             alt={product.name}
                           />
 
@@ -1088,7 +1089,7 @@ const handleChangePassword = () => {
                 <div className="seller-order-item" key={item._id}>
 
                   <img
-                    src={item.product?.image}
+                    src={getImageUrl(item.product?.image)}
                     alt={item.product?.name}
                   />
 

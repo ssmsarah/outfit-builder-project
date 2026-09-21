@@ -5,6 +5,7 @@ import api from "../../../api/axios";
 import { useCart } from "../../../context/CartContext";
 import { useWishlist } from "../../../context/WishlistContext";
 import { useToast } from "../../../context/ToastContext";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import "./ProductDetails.css";
 
 const ProductDetails = () => {
@@ -149,7 +150,7 @@ const ProductDetails = () => {
       <div className="pd-layout">
 
         <div className="pd-image">
-          <img src={product.image} alt={product.name} />
+          <img src={getImageUrl(product.image)} alt={product.name} />
         </div>
 
         <div className="pd-info">

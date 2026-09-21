@@ -3,6 +3,7 @@ import { Trash2, Minus, Plus, ShoppingBag, Store, Heart, Tag } from "lucide-reac
 import { useCart } from "../../../context/CartContext";
 import { useWishlist } from "../../../context/WishlistContext";
 import { useToast } from "../../../context/ToastContext";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import "./Cart.css";
 
 const unitPrice = (product) => {
@@ -98,7 +99,7 @@ const Cart = () => {
                     <div className="cart-item" key={item._id}>
 
                       <img
-                        src={item.product?.image}
+                        src={getImageUrl(item.product?.image)}
                         alt={item.product?.name}
                         onClick={() =>
                           navigate(`/product/${item.product?._id}`)

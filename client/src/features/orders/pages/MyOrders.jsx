@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PackageSearch } from "lucide-react";
 import api from "../../../api/axios";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import "./MyOrders.css";
 
 const statusColors = {
@@ -77,7 +78,7 @@ const MyOrders = () => {
                 {order.items.map((item) => (
                   <div className="my-order-item" key={item._id}>
                     <img
-                      src={item.product?.image}
+                      src={getImageUrl(item.product?.image)}
                       alt={item.product?.name}
                     />
                     <div className="my-order-item-info">
