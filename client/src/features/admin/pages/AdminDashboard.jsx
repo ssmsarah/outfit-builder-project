@@ -45,6 +45,7 @@ const AdminDashboard = () => {
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [dashboardError, setDashboardError] = useState("");
 
   const [openSales, setOpenSales] = useState(true);
   const [openCatalog, setOpenCatalog] = useState(true);
@@ -53,10 +54,12 @@ const AdminDashboard = () => {
   const fetchSellers = async () => {
     try {
       setLoadingSellers(true);
+      setDashboardError("");
       const { data } = await api.get("/admin/sellers");
       setSellers(data);
     } catch (error) {
       console.error("Sellers error:", error);
+      setDashboardError(error.response?.data?.message || "Unable to load sellers.");
     } finally {
       setLoadingSellers(false);
     }
@@ -87,10 +90,12 @@ const AdminDashboard = () => {
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
+      setDashboardError("");
       const { data } = await api.get("/admin/users");
       setUsers(data);
     } catch (error) {
       console.error("Users error:", error);
+      setDashboardError(error.response?.data?.message || "Unable to load users.");
     } finally {
       setLoadingUsers(false);
     }
@@ -109,10 +114,12 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     try {
       setLoadingOrders(true);
+      setDashboardError("");
       const { data } = await api.get("/admin/orders");
       setOrders(data);
     } catch (error) {
       console.error("Orders error:", error);
+      setDashboardError(error.response?.data?.message || "Unable to load orders.");
     } finally {
       setLoadingOrders(false);
     }
@@ -133,10 +140,12 @@ const AdminDashboard = () => {
   const fetchProducts = async () => {
     try {
       setLoadingProducts(true);
+      setDashboardError("");
       const { data } = await api.get("/admin/products");
       setProducts(data);
     } catch (error) {
       console.error("Products error:", error);
+      setDashboardError(error.response?.data?.message || "Unable to load products.");
     } finally {
       setLoadingProducts(false);
     }
@@ -157,15 +166,25 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
+        setDashboardError("");
         const { data } = await api.get("/admin/stats");
         setStats(data);
       } catch (error) {
         console.error("Dashboard stats error:", error);
+        setDashboardError(
+          error.response?.data?.message || "Unable to load dashboard data."
+        );
+
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/admin/login", { replace: true });
+        }
       }
     };
 
     fetchDashboardStats();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (activeSection === "sellers") {
@@ -886,6 +905,12 @@ const AdminDashboard = () => {
         </div>
 
         {renderContent()}
+
+        {dashboardError && (
+          <div className="admin-error" role="alert">
+            {dashboardError}
+          </div>
+        )}
 
       </main>
 

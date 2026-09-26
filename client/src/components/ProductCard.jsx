@@ -99,7 +99,9 @@ const ProductCard = ({ product }) => {
 
       <div className="product-content">
         <p className="product-category">
-          {product.category?.toUpperCase()}
+         {Array.isArray(product.category)
+  ? product.category.map((cat) => cat.toUpperCase()).join(" • ")
+  : product.category?.toUpperCase()}
         </p>
 
         <h3>{product.name}</h3>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../../assets/shopea.png";
+import { API_BASE_URL } from "../../../api/axios";
 import "./SellerAuth.css";
 
 const SellerRegister = () => {
@@ -48,7 +49,7 @@ if (!/^\d{9}$/.test(formData.panVat)) {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/auth/signup",
+        `${API_BASE_URL}/auth/signup`,
         {
           method: "POST",
           headers: {

@@ -147,6 +147,17 @@
   min-width: 0;
 }
 
+.admin-error {
+  margin: 0 30px 24px;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 
 /* =========================
    TOP BAR

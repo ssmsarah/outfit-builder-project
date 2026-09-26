@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../../assets/shopea.png";
+import { API_BASE_URL } from "../../../api/axios";
 import "./SellerAuth.css";
 
 const SellerLogin = () => {
@@ -26,7 +27,7 @@ const handleSubmit = async (e) => {
 
   try {
     const response = await fetch(
-      "http://localhost:5000/api/auth/login",
+      `${API_BASE_URL}/auth/login`,
       {
         method: "POST",
         headers: {

@@ -149,9 +149,12 @@ const ProductDetails = () => {
 
       <div className="pd-layout">
 
-        <div className="pd-image">
-          <img src={getImageUrl(product.image)} alt={product.name} />
-        </div>
+     <div className="pd-image">
+  <img
+    src={`http://localhost:5001${product.image}`}
+    alt={product.name}
+  />
+</div>
 
         <div className="pd-info">
 
