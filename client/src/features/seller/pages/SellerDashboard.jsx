@@ -189,6 +189,7 @@ const handleChangePassword = () => {
 
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
+  const [storeName, setStoreName] = useState("");
 
   const fetchMyProducts = async () => {
     try {
@@ -203,6 +204,31 @@ const handleChangePassword = () => {
   useEffect(() => {
     fetchMyProducts();
   }, []);
+
+  useEffect(() => {
+  const fetchMyStore = async () => {
+    try {
+      const storedUser = JSON.parse(
+        localStorage.getItem("user")
+      );
+
+      if (!storedUser?._id) {
+        console.error("Seller ID not found");
+        return;
+      }
+
+      const { data } = await api.get(
+        `/stores/${storedUser._id}`
+      );
+
+      setStoreName(data.storeName);
+    } catch (error) {
+      console.error("Failed to fetch store:", error);
+    }
+  };
+
+  fetchMyStore();
+}, []);
 
   const handleProductFormSuccess = () => {
     setProductView(null);
@@ -378,16 +404,19 @@ const handleChangePassword = () => {
 
           <h1>{activePage}</h1>
 <div className="seller-user">
-
   <div className="seller-user-avatar">
-    {profileData?.storeName?.charAt(0).toUpperCase() || "S"}
+    {storeName
+      ? storeName.charAt(0).toUpperCase()
+      : "S"}
   </div>
 
   <div>
-    <strong>{profileData?.storeName || "Seller"}</strong>
-    <span>Shoppea</span>
-  </div>
+    <strong>
+      {storeName || "My Store"}
+    </strong>
 
+    <span>Seller</span>
+  </div>
 </div>
 
           

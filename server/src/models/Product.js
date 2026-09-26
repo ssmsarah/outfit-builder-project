@@ -18,18 +18,22 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
-    category: {
+  category: {
+  type: [
+    {
       type: String,
-      required: true,
       enum: [
         "dresses",
-        "formals",
         "tops",
         "bottoms",
+        "formals",
         "shoes",
         "accessories",
       ],
     },
+  ],
+  required: true,
+},
 
     store: {
       type: String,

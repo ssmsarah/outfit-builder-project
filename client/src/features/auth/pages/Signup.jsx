@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../../assets/shopea.png";
 import googleLogo from "../../../assets/google.png";
+import { API_BASE_URL } from "../../../api/axios";
 import "./Auth.css";
 
 const Signup = () => {
@@ -56,7 +57,7 @@ const Signup = () => {
       const name = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
 
       const response = await fetch(
-        "http://localhost:5000/api/auth/signup",
+        `${API_BASE_URL}/auth/signup`,
         {
           method: "POST",
           headers: {

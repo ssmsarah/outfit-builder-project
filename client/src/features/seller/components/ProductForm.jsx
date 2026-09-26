@@ -6,7 +6,7 @@ import "../pages/SellerDashboard.css";
 
 const emptyForm = {
   name: "",
-  category: "",
+  category: [],
   description: "",
   price: "",
   stock: "",
@@ -20,9 +20,18 @@ const emptyForm = {
 
 const toFormState = (product) => ({
   name: product.name || "",
-  category: product.category
-    ? product.category.charAt(0).toUpperCase() + product.category.slice(1)
-    : "",
+
+  category: Array.isArray(product.category)
+    ? product.category.map(
+        (cat) => cat.charAt(0).toUpperCase() + cat.slice(1)
+      )
+    : product.category
+    ? [
+        product.category.charAt(0).toUpperCase() +
+          product.category.slice(1),
+      ]
+    : [],
+
   description: product.description || "",
   price: product.price ?? "",
   stock: product.stock ?? "",
@@ -92,25 +101,34 @@ const ProductForm = ({ mode, productId, initialProduct, onSuccess, onCancel }) =
       setError("Image upload failed. Please choose the image again.");
       return;
     }
-
+if (form.category.length === 0) {
+  setError("Please select at least one category.");
+  return;
+}
     if (!form.image) {
       setError("Please upload a product image.");
       return;
     }
 
-    const payload = {
-      name: form.name,
-      category: form.category.toLowerCase(),
-      description: form.description,
-      price: Number(form.price),
-      stock: Number(form.stock),
-      image: form.image,
-      sizes: form.size ? form.size.split(",").map((s) => s.trim()) : [],
-      colors: form.color ? form.color.split(",").map((c) => c.trim()) : [],
-      available: form.status === "Active",
-      discountType: form.discountType,
-      discountValue: form.discountValue ? Number(form.discountValue) : 0,
-    };
+ const payload = {
+  name: form.name,
+  category: form.category.map((cat) => cat.toLowerCase()),
+  description: form.description,
+  price: Number(form.price),
+  stock: Number(form.stock),
+  image: form.image,
+  sizes: form.size
+    ? form.size.split(",").map((s) => s.trim())
+    : [],
+  colors: form.color
+    ? form.color.split(",").map((c) => c.trim())
+    : [],
+  available: form.status === "Active",
+  discountType: form.discountType,
+  discountValue: form.discountValue
+    ? Number(form.discountValue)
+    : 0,
+};
 
     try {
       setSubmitting(true);
@@ -154,23 +172,55 @@ const ProductForm = ({ mode, productId, initialProduct, onSuccess, onCancel }) =
 
         {/* CATEGORY */}
 
-        <div className="product-form-group">
-          <label>Category</label>
-          <select
-            name="category"
-            value={form.category}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select category</option>
-            <option value="Dresses">Dresses</option>
-            <option value="Tops">Tops</option>
-            <option value="Bottoms">Bottoms</option>
-            <option value="Formals">Formals</option>
-            <option value="Shoes">Shoes</option>
-            <option value="Accessories">Accessories</option>
-          </select>
-        </div>
+      {/* CATEGORY */}
+
+<div className="product-form-group">
+  <label>Categories</label>
+
+  <div className="category-checkbox-grid">
+
+    {[
+      "Dresses",
+      "Tops",
+      "Bottoms",
+      "Formals",
+      "Shoes",
+      "Accessories",
+    ].map((category) => (
+      <label
+        key={category}
+        className="category-checkbox"
+      >
+        <input
+          type="checkbox"
+          value={category}
+          checked={form.category.includes(category)}
+          onChange={(e) => {
+            const value = e.target.value;
+
+            setForm((prev) => ({
+              ...prev,
+              category: prev.category.includes(value)
+                ? prev.category.filter(
+                    (cat) => cat !== value
+                  )
+                : [...prev.category, value],
+            }));
+          }}
+        />
+
+        <span>{category}</span>
+      </label>
+    ))}
+
+  </div>
+
+  {form.category.length === 0 && (
+    <small className="category-help">
+      Select at least one category.
+    </small>
+  )}
+</div>
 
         {/* DESCRIPTION */}
 

@@ -21,6 +21,7 @@ import Wishlist from "./features/wishlist/pages/Wishlist";
 import Checkout from "./features/checkout/pages/Checkout";
 import OrderConfirmation from "./features/orders/pages/OrderConfirmation";
 import MyOrders from "./features/orders/pages/MyOrders";
+import OutfitBuilder from "./features/outfitBuilder/pages/OutfitBuilder";
 
 function App() {
   return (
@@ -54,6 +55,26 @@ function App() {
 
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route element={<Layout />}>
+  <Route path="/product/:id" element={<ProductDetails />} />
+  <Route path="/stores" element={<Stores />} />
+  <Route path="/stores/:sellerId" element={<StoreDetail />} />
+  <Route path="/categories" element={<CategoryList />} />
+  <Route path="/category/:category" element={<CategoryProducts />} />
+  <Route path="/new-arrivals" element={<NewArrivalsPage />} />
+  <Route path="/search" element={<SearchResults />} />
+  <Route path="/cart" element={<Cart />} />
+  <Route path="/wishlist" element={<Wishlist />} />
+  <Route path="/checkout" element={<Checkout />} />
+  <Route
+    path="/order-confirmation/:orderId"
+    element={<OrderConfirmation />}
+  />
+  <Route path="/my-orders" element={<MyOrders />} />
+
+  {/* Outfit Builder */}
+  <Route path="/outfit-builder" element={<OutfitBuilder />} />
+</Route>
 
     </Routes>
   );
