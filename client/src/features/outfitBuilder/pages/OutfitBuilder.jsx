@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Check,
   ChevronRight,
@@ -8,6 +9,9 @@ import {
 } from "lucide-react";
 
 import api from "../../../api/axios";
+import SuggestedOutfits from "../components/SuggestedOutfits";
+import { useCart } from "../../../context/CartContext";
+import { useToast } from "../../../context/ToastContext";
 
 import "./OutfitBuilder.css";
 
@@ -51,6 +55,10 @@ const neutralColors = [
 ];
 
 const OutfitBuilder = () => {
+  const navigate = useNavigate();
+  const cart = useCart();
+  const { showToast } = useToast();
+
   const [products, setProducts] = useState({
     dresses: [],
     formals: [],
@@ -353,6 +361,41 @@ const OutfitBuilder = () => {
     setActiveCategory(null);
   };
 
+  /*
+   * -------------------------------------------------------
+   * COMPLETE LOOK -> CHECKOUT
+   * -------------------------------------------------------
+   * Adds every selected piece to the (server-backed) cart,
+   * then redirects to checkout so the order summary there
+   * reflects the completed outfit.
+   */
+  const [completingLook, setCompletingLook] = useState(false);
+
+  const handleCompleteLook = async () => {
+    if (!localStorage.getItem("token")) {
+      showToast("Log in to complete your look", "error");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setCompletingLook(true);
+
+      for (const product of selectedItems) {
+        await cart.addItem(product._id, 1);
+      }
+
+      navigate("/checkout");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Couldn't add your look to the cart",
+        "error"
+      );
+    } finally {
+      setCompletingLook(false);
+    }
+  };
+
   const getImage = (product) => {
     if (!product?.image) {
       return "/placeholder-product.jpg";
@@ -531,6 +574,8 @@ const OutfitBuilder = () => {
           Start Over
         </button>
       </div>
+
+      <SuggestedOutfits anchorItem={selectedItems[0]} />
 
       <div className="outfit-builder-content">
 
@@ -761,22 +806,11 @@ const OutfitBuilder = () => {
 
           <button
             className="generate-outfit-button"
-            onClick={() => {
-              /*
-               * This is intentionally NOT disabled
-               * when only 1 or 2 categories are selected.
-               */
-              document
-                .querySelector(
-                  ".complete-outfit-preview"
-                )
-                ?.scrollIntoView({
-                  behavior: "smooth",
-                });
-            }}
+            onClick={handleCompleteLook}
+            disabled={completingLook}
           >
             <Sparkles size={18} />
-            Complete Look
+            {completingLook ? "Adding to cart..." : "Complete Look"}
           </button>
 
           <div className="complete-outfit-preview">
