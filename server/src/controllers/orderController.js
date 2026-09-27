@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import { logInteraction } from "../services/interactionService.js";
 
 // Place an order (from cart or a direct buy-now item)
 export const placeOrder = async (req, res) => {
@@ -65,6 +66,14 @@ export const placeOrder = async (req, res) => {
       totalAmount,
       shippingAddress,
     });
+
+    // One purchase interaction per distinct item in the order (not scaled
+    // by quantity - see Decision Log T3.1).
+    await Promise.all(
+      orderItems.map((item) =>
+        logInteraction({ userId: req.user.userId, itemId: item.product, type: "purchase" })
+      )
+    );
 
     // Remove any ordered products from the customer's cart
     const orderedProductIds = items.map((item) => item.productId);

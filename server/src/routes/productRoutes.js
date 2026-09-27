@@ -11,7 +11,7 @@ import {
   updateProduct,
 } from "../controllers/productController.js";
 
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, optionalAuth } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -28,8 +28,9 @@ router.get("/new-arrivals", getNewArrivals);
 // Get products by category
 router.get("/category/:category", getProductsByCategory);
 
-// Get single product
-router.get("/:id", getProduct);
+// Get single product (view tracked for logged-in users; anonymous browsing
+// still works unauthenticated - see authMiddleware.optionalAuth)
+router.get("/:id", optionalAuth, getProduct);
 
 // Create product
 // Seller must be logged in

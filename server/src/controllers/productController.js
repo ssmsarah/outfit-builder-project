@@ -1,16 +1,7 @@
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-
-// Only products belonging to registered, admin-approved sellers should ever
-// reach the public storefront (search, category browsing, new arrivals, etc).
-const getApprovedSellerIds = async () => {
-  const sellers = await User.find({
-    role: "seller",
-    sellerStatus: "approved",
-  }).select("_id");
-
-  return sellers.map((s) => s._id);
-};
+import { logInteraction } from "../services/interactionService.js";
+import { getApprovedSellerIds } from "../services/productService.js";
 
 // Get all products (optionally filtered by search / category / seller / discounted)
 export const getProducts = async (req, res) => {
@@ -124,6 +115,12 @@ export const getProduct = async (req, res) => {
       return res.status(404).json({
         message: "Product not found",
       });
+    }
+
+    // Only logged-in views are attributed (req.user is set by optionalAuth
+    // when a valid token is present; anonymous browsing is untracked).
+    if (req.user) {
+      await logInteraction({ userId: req.user.userId, itemId: product._id, type: "view" });
     }
 
     res.status(200).json(product);

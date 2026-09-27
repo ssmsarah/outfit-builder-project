@@ -24,6 +24,26 @@ export const protect = (req, res, next) => {
   }
 };
 
+// Like `protect`, but never rejects the request: decodes the bearer token
+// and sets req.user when a valid one is present, otherwise just proceeds
+// anonymously. Used on public routes (e.g. product detail) that should stay
+// accessible to anonymous visitors while still attributing interactions to
+// logged-in users when possible (T3.1 view tracking).
+export const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.split(" ")[1];
+      req.user = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      // Invalid/expired token - proceed as anonymous rather than blocking.
+    }
+  }
+
+  next();
+};
+
 export const requireRole = (...roles) => (req, res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
     return res.status(403).json({

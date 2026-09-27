@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Product from "../models/Product.js";
+import { logInteraction, removeLike } from "../services/interactionService.js";
 
 export const getWishlist = async (req, res) => {
   try {
@@ -35,6 +36,8 @@ export const addToWishlist = async (req, res) => {
       await user.save();
     }
 
+    await logInteraction({ userId: req.user.userId, itemId: productId, type: "like" });
+
     await user.populate("wishlist");
 
     res.status(200).json(user.wishlist);
@@ -57,6 +60,7 @@ export const removeFromWishlist = async (req, res) => {
     );
 
     await user.save();
+    await removeLike({ userId: req.user.userId, itemId: productId });
     await user.populate("wishlist");
 
     res.status(200).json(user.wishlist);
