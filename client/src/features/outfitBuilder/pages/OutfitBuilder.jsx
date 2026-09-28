@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import api from "../../../api/axios";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import { useCart } from "../../../context/CartContext";
 import { useToast } from "../../../context/ToastContext";
 
@@ -221,7 +222,8 @@ const groupBySubtype = (ranked, group) => {
   return [...groups.values()];
 };
 
-const getImage = (product) => product?.image || "/placeholder-product.jpg";
+const getImage = (product) =>
+  product?.image ? getImageUrl(product.image) : "/placeholder-product.jpg";
 
 const getPrice = (product) => Number(product?.finalPrice ?? product?.price ?? 0);
 
