@@ -3,6 +3,7 @@ import { Heart, Bookmark, Sparkles } from "lucide-react";
 import { recommendOutfits, saveOutfitItems } from "../../../api/outfitApi";
 import { useWishlist } from "../../../context/WishlistContext";
 import { useToast } from "../../../context/ToastContext";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import "./SuggestedOutfits.css";
 
 // T4.3: displays the new scored-algorithm's complete-outfit suggestions
@@ -107,7 +108,7 @@ const SuggestedOutfits = ({ anchorItem }) => {
             <div className="suggested-outfit-products">
               {outfit.products.map((product) => (
                 <div className="suggested-outfit-product" key={product.id}>
-                  <img src={product.image} alt={product.name} />
+                  <img src={getImageUrl(product.image)} alt={product.name} />
                   <button
                     type="button"
                     className={`like-button ${isWishlisted?.(product.id) ? "liked" : ""}`}

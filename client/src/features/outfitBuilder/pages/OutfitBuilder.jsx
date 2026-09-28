@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import api from "../../../api/axios";
-import SuggestedOutfits from "../components/SuggestedOutfits";
+import { getImageUrl } from "../../../utils/getImageUrl";
 import { useCart } from "../../../context/CartContext";
 import { useToast } from "../../../context/ToastContext";
 
@@ -41,6 +41,32 @@ const CATEGORY_ORDER = [
   "shoes",
   "accessories",
 ];
+
+const getProductCategories = (product) => {
+  if (Array.isArray(product?.category)) {
+    return product.category;
+  }
+
+  return product?.category ? [product.category] : [];
+};
+
+const getAllowedRecommendationCategories = (selectedItems) => {
+  const selectedCategories = selectedItems.flatMap(getProductCategories);
+
+  if (selectedCategories.includes("dresses") || selectedCategories.includes("formals")) {
+    return ["shoes", "accessories"];
+  }
+
+  if (selectedCategories.includes("tops")) {
+    return ["bottoms", "shoes", "accessories"];
+  }
+
+  if (selectedCategories.includes("bottoms")) {
+    return ["tops", "shoes", "accessories"];
+  }
+
+  return CATEGORY_ORDER;
+};
 
 const neutralColors = [
   "black",
@@ -263,10 +289,11 @@ const OutfitBuilder = () => {
     );
 
     const result = {};
+    const allowedCategories = getAllowedRecommendationCategories(selectedItems);
 
-    CATEGORY_ORDER.forEach((category) => {
-      const alreadySelected = selectedItems.some(
-        (item) => item.category === category
+    allowedCategories.forEach((category) => {
+      const alreadySelected = selectedItems.some((item) =>
+        getProductCategories(item).includes(category)
       );
 
       if (alreadySelected) {
@@ -285,17 +312,13 @@ const OutfitBuilder = () => {
           compatibilityScore:
             calculateWeightedScore(product),
         }))
-        .filter(
-          (product) =>
-            product.compatibilityScore >= 30
-        )
         .sort(
           (a, b) =>
             b.compatibilityScore -
             a.compatibilityScore
         );
 
-      result[category] = scored.slice(0, 6);
+      result[category] = scored;
     });
 
     return result;
@@ -326,7 +349,9 @@ const OutfitBuilder = () => {
       const withoutSameCategory =
         previous.filter(
           (item) =>
-            item.category !== product.category
+            !getProductCategories(item).some((category) =>
+              getProductCategories(product).includes(category)
+            )
         );
 
       return [
@@ -401,7 +426,7 @@ const OutfitBuilder = () => {
       return "/placeholder-product.jpg";
     }
 
-    return product.image;
+    return getImageUrl(product.image);
   };
 
   const getPrice = (product) => {
@@ -500,7 +525,7 @@ const OutfitBuilder = () => {
         </div>
 
         {activeCategory && (
-          <div className="category-selection-modal">
+          <div className="category-selection-inline">
             <div className="category-selection-content">
 
               <button
@@ -575,8 +600,6 @@ const OutfitBuilder = () => {
         </button>
       </div>
 
-      <SuggestedOutfits anchorItem={selectedItems[0]} />
-
       <div className="outfit-builder-content">
 
         {/* LEFT */}
@@ -619,9 +642,9 @@ const OutfitBuilder = () => {
                   </strong>
 
                   <small>
-                    {CATEGORY_LABELS[
-                      product.category
-                    ]}
+                    {getProductCategories(product)
+                      .map((category) => CATEGORY_LABELS[category] || category)
+                      .join(" • ")}
                   </small>
                 </div>
 
@@ -639,16 +662,17 @@ const OutfitBuilder = () => {
           <div className="recommendation-heading">
             <div>
               <span className="selection-step">
-                SMART RECOMMENDATIONS
+                OUTFIT OPTIONS
               </span>
 
               <h2>
-                Complete Your Look
+                Choose the next piece
               </h2>
 
               <p>
-                Items below are ranked using your
-                compatibility score.
+                All available bottoms, shoes, accessories, and other allowed
+                categories are shown and ranked using Rule-Based Attribute
+                Matching with Weighted Scoring.
               </p>
             </div>
           </div>
@@ -699,11 +723,10 @@ const OutfitBuilder = () => {
             </span>
 
             <div className="manual-category-buttons">
-              {CATEGORY_ORDER.map((category) => {
+              {getAllowedRecommendationCategories(selectedItems).map((category) => {
                 const alreadySelected =
                   selectedItems.some(
-                    (item) =>
-                      item.category === category
+                    (item) => getProductCategories(item).includes(category)
                   );
 
                 if (alreadySelected) {
@@ -758,9 +781,9 @@ const OutfitBuilder = () => {
 
                 <div className="preview-item-details">
                   <span>
-                    {CATEGORY_LABELS[
-                      product.category
-                    ]}
+                    {getProductCategories(product)
+                      .map((category) => CATEGORY_LABELS[category] || category)
+                      .join(" • ")}
                   </span>
 
                   <strong>
@@ -829,7 +852,7 @@ const OutfitBuilder = () => {
       </div>
 
       {activeCategory && (
-        <div className="category-selection-modal">
+        <div className="category-selection-inline">
 
           <div className="category-selection-content">
 
@@ -900,7 +923,9 @@ const ProductOption = ({
       <div className="outfit-product-info">
 
         <span className="outfit-product-category">
-          {CATEGORY_LABELS[product.category]}
+          {getProductCategories(product)
+            .map((category) => CATEGORY_LABELS[category] || category)
+            .join(" • ")}
         </span>
 
         <h3>

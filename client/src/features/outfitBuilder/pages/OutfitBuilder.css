@@ -929,6 +929,16 @@
   backdrop-filter: blur(5px);
 }
 
+.category-selection-inline {
+  margin-top: 18px;
+}
+
+.category-selection-inline .category-selection-content {
+  width: 100%;
+  max-height: none;
+  padding: 24px;
+}
+
 .category-selection-content {
   position: relative;
 

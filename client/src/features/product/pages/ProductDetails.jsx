@@ -151,14 +151,18 @@ const ProductDetails = () => {
 
      <div className="pd-image">
   <img
-    src={`http://localhost:5001${product.image}`}
+    src={getImageUrl(product.image)}
     alt={product.name}
   />
 </div>
 
         <div className="pd-info">
 
-          <p className="pd-category">{product.category?.toUpperCase()}</p>
+          <p className="pd-category">
+            {Array.isArray(product.category)
+              ? product.category.map((category) => category.toUpperCase()).join(" • ")
+              : product.category?.toUpperCase()}
+          </p>
 
           <h1>{product.name}</h1>
 
