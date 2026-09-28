@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
+import { invalidateSearchIndex } from "../services/searchService.js";
 
 
 // ===============================
@@ -84,6 +85,9 @@ export const approveSeller = async (req, res) => {
       });
     }
 
+    // Every product of this seller enters or leaves the storefront.
+    invalidateSearchIndex();
+
     res.status(200).json({
       message: "Seller approved successfully",
       seller: {
@@ -128,6 +132,9 @@ export const rejectSeller = async (req, res) => {
         message: "Seller not found",
       });
     }
+
+    // Every product of this seller enters or leaves the storefront.
+    invalidateSearchIndex();
 
     res.status(200).json({
       message: "Seller rejected successfully",

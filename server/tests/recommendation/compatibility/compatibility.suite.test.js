@@ -20,7 +20,21 @@ const context = { targetOccasion: "casual", targetSeason: null };
 // ever legitimately needs to change (e.g. a deliberate weight/config
 // change), recompute and update deliberately - a silent diff here means
 // something in the color/compatibility pipeline shifted unexpectedly.
+//
+// I7.3 (rules in generation) updated this snapshot intentionally: the
+// matching_style_set boost (+0.05) lifts the two all-casual outfits, so #1
+// goes 0.9708 -> 1.0 (clamped) and the floral-skirt outfit moves from #3 to
+// #2 (0.9215 -> 0.9715). The pre-rules snapshot is kept below and must
+// still be reproduced exactly with rules switched off.
 const EXPECTED_BLACK_TSHIRT_TOP5 = [
+  { ids: ["black_tshirt", "blue_jeans", "white_sneakers"], score: 1 },
+  { ids: ["black_tshirt", "green_floral_skirt", "white_sneakers"], score: 0.9714789915966388 },
+  { ids: ["beige_chinos", "black_tshirt", "leather_belt", "white_sneakers"], score: 0.9262012747127836 },
+  { ids: ["black_tshirt", "blue_jeans", "sport_running_shoes"], score: 0.8459047619047618 },
+  { ids: ["black_oxfords", "black_tshirt", "blue_jeans", "leather_belt"], score: 0.8293328664799253 },
+];
+
+const EXPECTED_BLACK_TSHIRT_TOP5_RULES_OFF = [
   { ids: ["black_tshirt", "blue_jeans", "white_sneakers"], score: 0.9708123249299722 },
   { ids: ["beige_chinos", "black_tshirt", "leather_belt", "white_sneakers"], score: 0.9262012747127836 },
   { ids: ["black_tshirt", "green_floral_skirt", "white_sneakers"], score: 0.9214789915966387 },
@@ -35,6 +49,13 @@ describe("T2.9 - regression snapshot: black_tshirt top-5 from the fixture wardro
     expect(results).toHaveLength(5);
     const actual = results.map((r) => ({ ids: [...r.items.map((i) => i.id)].sort(), score: r.score }));
     expect(actual).toEqual(EXPECTED_BLACK_TSHIRT_TOP5);
+  });
+
+  it("with rules switched off, reproduces the pre-I7.3 snapshot exactly", () => {
+    const results = generateOutfits(wardrobeById.black_tshirt, wardrobe, context, 5, { rules: [] });
+
+    const actual = results.map((r) => ({ ids: [...r.items.map((i) => i.id)].sort(), score: r.score }));
+    expect(actual).toEqual(EXPECTED_BLACK_TSHIRT_TOP5_RULES_OFF);
   });
 });
 

@@ -1,0 +1,180 @@
+.outfit-suggestions {
+  max-width: 1100px;
+  margin: 0 auto 40px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #f3d6de;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(217, 93, 129, 0.08);
+}
+
+.outfit-suggestions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.outfit-suggestions-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #d95d81;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.outfit-suggestions-header h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  color: #2b2b2b;
+}
+
+.outfit-suggestions-header p {
+  margin: 4px 0 0;
+  color: #777;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.outfit-suggestions-close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #eee;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  color: #555;
+}
+
+.outfit-suggestions-close:hover {
+  border-color: #d95d81;
+  color: #d95d81;
+}
+
+.outfit-suggestions-status {
+  color: #666;
+  font-size: 14px;
+}
+
+.outfit-suggestions-status.error {
+  color: #c0392b;
+}
+
+.outfit-suggestions-status ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.outfit-suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.outfit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #f0e6ea;
+  border-radius: 12px;
+  background: #fffafb;
+}
+
+.outfit-card-score {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #d95d81;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.outfit-card-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+}
+
+.outfit-card-product {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #444;
+  text-decoration: none;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.outfit-card-product img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f4f4f4;
+}
+
+.outfit-card-product span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outfit-card-rules,
+.outfit-card-reasons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.outfit-card-rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.outfit-card-rules li span {
+  flex: 1;
+}
+
+.outfit-card-rules li.boost {
+  background: #eaf7ef;
+  color: #1e7a45;
+}
+
+.outfit-card-rules li.penalty {
+  background: #fdf0e6;
+  color: #a35a12;
+}
+
+.outfit-card-reasons li {
+  color: #666;
+  padding-left: 14px;
+  position: relative;
+}
+
+.outfit-card-reasons li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  color: #d95d81;
+}
+
+@media (max-width: 600px) {
+  .outfit-suggestions {
+    padding: 16px;
+  }
+}

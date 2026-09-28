@@ -17,7 +17,7 @@ export const recommendOutfits = async (req, res) => {
       return res.status(400).json({ message: validationError });
     }
 
-    const outfits = await getOutfitRecommendations({
+    const { outfits, ruleMessages } = await getOutfitRecommendations({
       anchorItemId,
       userId: req.user?.userId,
       occasion,
@@ -25,7 +25,7 @@ export const recommendOutfits = async (req, res) => {
       limit,
     });
 
-    res.status(200).json({ outfits });
+    res.status(200).json({ outfits, ruleMessages });
   } catch (error) {
     if (error instanceof AnchorNotFoundError) {
       return res.status(404).json({ message: error.message });

@@ -2,6 +2,7 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import { logInteraction } from "../services/interactionService.js";
 import { getApprovedSellerIds } from "../services/productService.js";
+import * as searchService from "../services/searchService.js";
 
 // Get all products (optionally filtered by search / category / seller / discounted)
 export const getProducts = async (req, res) => {
@@ -170,6 +171,8 @@ export const createProduct = async (req, res) => {
       store: seller.storeName,
     });
 
+    await searchService.syncSearchIndex(() => searchService.addItem(product));
+
     res.status(201).json(product);
   } catch (error) {
     res.status(400).json({
@@ -191,6 +194,8 @@ export const deleteProduct = async (req, res) => {
         message: "Product not found or you are not authorized to delete it",
       });
     }
+
+    await searchService.syncSearchIndex(() => searchService.removeItem(product._id));
 
     res.status(200).json({
       message: "Product deleted successfully",
@@ -225,6 +230,8 @@ export const updateProduct = async (req, res) => {
       });
     }
 
+    await searchService.syncSearchIndex(() => searchService.updateItem(product));
+
     res.status(200).json({
       message: "Product updated successfully",
       product,
@@ -247,6 +254,8 @@ export const adminDeleteProduct = async (req, res) => {
         message: "Product not found",
       });
     }
+
+    await searchService.syncSearchIndex(() => searchService.removeItem(product._id));
 
     res.status(200).json({
       message: "Product removed successfully",

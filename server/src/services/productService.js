@@ -14,6 +14,19 @@ export const getApprovedSellerIds = async () => {
   return sellers.map((s) => s._id);
 };
 
+// Every product shoppers can see: available and from an approved seller.
+// Shared by the recommender (T4.1) and fuzzy search (S6.9).
+export const getStorefrontProducts = async () => {
+  const approvedSellerIds = await getApprovedSellerIds();
+  return Product.find({ available: true, seller: { $in: approvedSellerIds } });
+};
+
+export const isStorefrontProduct = async (product) => {
+  if (!product || product.available === false) return false;
+  const seller = await User.findById(product.seller).select("role sellerStatus");
+  return seller?.role === "seller" && seller.sellerStatus === "approved";
+};
+
 export const createProduct = async (productData) => {
   const product = await Product.create(productData);
   return product;

@@ -85,6 +85,28 @@ describe("POST /api/outfits/recommend - integration", () => {
     expect(outfit).toHaveProperty("finalScore");
     expect(outfit).toHaveProperty("alpha");
     expect(outfit).toHaveProperty("products");
+    // I7.3: rule output per outfit
+    expect(outfit).toHaveProperty("ruleAdjustment");
+    expect(outfit).toHaveProperty("appliedRules");
+    expect(outfit).toHaveProperty("adjustedCompatibilityScore");
+    expect(res.body.ruleMessages).toEqual([]);
+  });
+
+  it("I7.3: an anchor that fails a hard rule returns 200 with no outfits and the rule message", async () => {
+    const seller = await createApprovedSeller();
+    const sportyTop = await Product.create(
+      productData({ name: "Track Top", category: ["tops"], seller: seller._id, colors: ["red"], style: "sporty" })
+    );
+    await Product.create(productData({ name: "Bottom", category: ["bottoms"], seller: seller._id, colors: ["black"] }));
+    await Product.create(productData({ name: "Shoes", category: ["shoes"], seller: seller._id, colors: ["black"] }));
+
+    const res = await request(app)
+      .post("/api/outfits/recommend")
+      .send({ anchorItemId: sportyTop._id.toString(), occasion: "formal" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.outfits).toEqual([]);
+    expect(res.body.ruleMessages).toEqual(["Sporty or streetwear items are not suitable for formal occasions"]);
   });
 
   it("success: takes the user from the auth session (Bearer token) for personalization", async () => {

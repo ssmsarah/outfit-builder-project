@@ -71,5 +71,15 @@ export function mapProductToItem(product) {
     item.isNeutralOverride = true;
   }
 
+  // Text fields for fuzzy search (S6.2). Scoring ignores them; they are
+  // only copied when present so untagged records keep the same shape.
+  if (typeof product.name === "string" && product.name.trim()) {
+    item.name = product.name;
+  }
+
+  if (typeof product.description === "string" && product.description.trim()) {
+    item.description = product.description;
+  }
+
   return item;
 }

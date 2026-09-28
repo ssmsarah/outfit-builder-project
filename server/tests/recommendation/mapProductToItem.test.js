@@ -91,6 +91,21 @@ describe("mapProductToItem - real / user-fed data compatibility", () => {
     expect(item.isNeutralOverride).toBeUndefined();
   });
 
+  it("copies name and description for search (S6.2) only when present", () => {
+    const item = mapProductToItem({
+      _id: "p3",
+      name: "Black Cotton Tee",
+      description: "Soft everyday tee",
+      category: ["tops"],
+    });
+    expect(item.name).toBe("Black Cotton Tee");
+    expect(item.description).toBe("Soft everyday tee");
+
+    const bare = mapProductToItem({ _id: "p4", name: "  ", description: "", category: ["tops"] });
+    expect(bare).not.toHaveProperty("name");
+    expect(bare).not.toHaveProperty("description");
+  });
+
   it("throws for a missing product", () => {
     expect(() => mapProductToItem(null)).toThrow();
     expect(() => mapProductToItem(undefined)).toThrow();
