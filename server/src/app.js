@@ -14,6 +14,7 @@ import storeRoutes from "./routes/storeRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import outfitRecommendationRoutes from "./routes/outfitRecommendationRoutes.js";
 import interactionRoutes from "./routes/interactionRoutes.js";
+import itemSearchRoutes from "./routes/itemSearchRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,6 +36,7 @@ app.use("/api/stores", storeRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/outfits", outfitRecommendationRoutes);
 app.use("/api/interactions", interactionRoutes);
+app.use("/api/items", itemSearchRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });

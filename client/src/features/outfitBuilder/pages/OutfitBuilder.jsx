@@ -1,46 +1,83 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Check,
+  ChevronLeft,
   ChevronRight,
   Sparkles,
   RotateCcw,
-  X,
+  ArrowDown,
+  Shirt,
 } from "lucide-react";
 
 import api from "../../../api/axios";
-import SuggestedOutfits from "../components/SuggestedOutfits";
 import { useCart } from "../../../context/CartContext";
 import { useToast } from "../../../context/ToastContext";
 
 import "./OutfitBuilder.css";
 
+/*
+ * Tops come from both the "tops" and "formals" marketplace categories
+ * (formals are mostly shirts/blazers - see outfitAttributeDefaults.js).
+ */
 const CATEGORY_ENDPOINTS = {
-  dresses: "dresses",
-  formals: "formals",
-  tops: "tops",
-  bottoms: "bottoms",
-  shoes: "shoes",
-  accessories: "accessories",
+  tops: ["tops", "formals"],
+  bottoms: ["bottoms"],
+  shoes: ["shoes"],
+  accessories: ["accessories"],
 };
 
-const CATEGORY_LABELS = {
-  dresses: "Dresses",
-  formals: "Formals",
-  tops: "Tops",
-  bottoms: "Bottoms",
-  shoes: "Shoes",
-  accessories: "Accessories",
+/*
+ * Products have no sub-type field, so the sub-type (Jeans, Sneakers, Bag...)
+ * is derived from keywords in the product name. Order matters: the first
+ * matching type wins (e.g. "t-shirt" must be checked before "shirt").
+ */
+const SUBTYPES = {
+  tops: [
+    { key: "tshirts", label: "T-Shirts", keywords: ["t-shirt", "tshirt", "t shirt", "tee"] },
+    { key: "hoodies", label: "Hoodies", keywords: ["hoodie", "hooded"] },
+    { key: "sweaters", label: "Sweaters", keywords: ["sweater", "sweatshirt", "cardigan", "pullover", "jumper", "knit"] },
+    { key: "blouses", label: "Blouses", keywords: ["blouse"] },
+    { key: "shirts", label: "Shirts", keywords: ["shirt"] },
+  ],
+  bottoms: [
+    { key: "jeans", label: "Jeans", keywords: ["jean", "denim"] },
+    { key: "skirt", label: "Skirt", keywords: ["skirt"] },
+    { key: "trousers", label: "Trousers", keywords: ["trouser", "chino", "slacks"] },
+    { key: "shorts", label: "Shorts", keywords: ["short"] },
+    { key: "pants", label: "Pants", keywords: ["pant", "jogger", "legging", "cargo"] },
+  ],
+  shoes: [
+    { key: "sneakers", label: "Sneakers", keywords: ["sneaker", "trainer", "running", "canvas"] },
+    { key: "boots", label: "Boots", keywords: ["boot"] },
+    { key: "loafers", label: "Loafers", keywords: ["loafer", "moccasin", "oxford", "derby"] },
+    { key: "heels", label: "Heels", keywords: ["heel", "pump", "stiletto", "wedge"] },
+    { key: "sandals", label: "Sandals", keywords: ["sandal", "slipper", "flip", "flat"] },
+  ],
+  accessories: [
+    { key: "bag", label: "Bag", keywords: ["bag", "tote", "clutch", "purse", "backpack", "satchel"] },
+    { key: "jewelry", label: "Jewelry", keywords: ["necklace", "earring", "ring", "bracelet", "jewel", "pendant", "chain", "bangle"] },
+    { key: "sunglasses", label: "Sunglasses", keywords: ["sunglass", "glasses", "shades"] },
+    { key: "hat", label: "Hat", keywords: ["hat", "cap", "beanie", "beret"] },
+    { key: "scarf", label: "Scarf", keywords: ["scarf", "shawl", "stole"] },
+    { key: "watch", label: "Watch", keywords: ["watch"] },
+    { key: "belt", label: "Belt", keywords: ["belt"] },
+  ],
 };
 
-const CATEGORY_ORDER = [
-  "dresses",
-  "formals",
-  "tops",
-  "bottoms",
-  "shoes",
-  "accessories",
-];
+const OTHER_SUBTYPE = { key: "other", label: "Other" };
+
+const getSubtype = (product, group) => {
+  const name = (product?.name || "").toLowerCase();
+
+  return (
+    SUBTYPES[group].find((type) =>
+      type.keywords.some((keyword) => name.includes(keyword))
+    ) || OTHER_SUBTYPE
+  );
+};
+
+const MATCH_THRESHOLD = 30;
 
 const neutralColors = [
   "black",
@@ -54,53 +91,194 @@ const neutralColors = [
   "denim",
 ];
 
+/*
+ * -------------------------------------------------------
+ * RULE-BASED MATCHING
+ * -------------------------------------------------------
+ *
+ * These rules determine whether two products are
+ * compatible.
+ */
+const ruleBasedCompatibility = (selectedProduct, candidate) => {
+  if (!selectedProduct || !candidate) {
+    return {
+      compatible: false,
+      score: 0,
+    };
+  }
+
+  let score = 0;
+
+  const selectedColors = (selectedProduct.colors || []).map((color) =>
+    color.toLowerCase()
+  );
+
+  const candidateColors = (candidate.colors || []).map((color) =>
+    color.toLowerCase()
+  );
+
+  /*
+   * RULE 1
+   * Same color = strong compatibility
+   */
+  if (candidateColors.some((color) => selectedColors.includes(color))) {
+    score += 35;
+  }
+
+  /*
+   * RULE 2
+   * Neutral colors work with most colors.
+   */
+  if (candidateColors.some((color) => neutralColors.includes(color))) {
+    score += 20;
+  }
+
+  /*
+   * RULE 3
+   * Selected product has neutral color.
+   */
+  if (selectedColors.some((color) => neutralColors.includes(color))) {
+    score += 15;
+  }
+
+  /*
+   * RULE 4
+   * Product is available and in stock.
+   */
+  if (candidate.available !== false && candidate.stock > 0) {
+    score += 15;
+  }
+
+  /*
+   * RULE 5
+   * Higher-rated products receive additional score.
+   */
+  const rating = Number(candidate.ratingAvg || 0);
+
+  if (rating >= 4.5) {
+    score += 15;
+  } else if (rating >= 4) {
+    score += 10;
+  } else if (rating >= 3) {
+    score += 5;
+  }
+
+  return {
+    compatible: score >= MATCH_THRESHOLD,
+    score: Math.min(score, 100),
+  };
+};
+
+/*
+ * -------------------------------------------------------
+ * WEIGHTED SUM MODEL
+ * -------------------------------------------------------
+ *
+ * Scores a candidate against every piece already chosen in the earlier
+ * steps. Later pieces carry more weight (top = 1, bottom = 2, shoes = 3),
+ * so the step directly before has the most influence.
+ */
+const calculateWeightedScore = (candidate, chosenItems) => {
+  let totalScore = 0;
+  let totalWeight = 0;
+
+  chosenItems.forEach((chosen, index) => {
+    const weight = index + 1;
+
+    totalScore += ruleBasedCompatibility(chosen, candidate).score * weight;
+    totalWeight += weight;
+  });
+
+  return totalWeight ? Math.round(totalScore / totalWeight) : 0;
+};
+
+const rankCandidates = (candidates, chosenItems) =>
+  candidates
+    .map((product) => ({
+      ...product,
+      compatibilityScore: calculateWeightedScore(product, chosenItems),
+    }))
+    .filter((product) => product.compatibilityScore >= MATCH_THRESHOLD)
+    .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+
+/*
+ * Groups ranked products by sub-type. Groups are ordered by their best
+ * match, so the most compatible type (e.g. Jeans) comes first.
+ */
+const groupBySubtype = (ranked, group) => {
+  const groups = new Map();
+
+  ranked.forEach((product) => {
+    const type = getSubtype(product, group);
+
+    if (!groups.has(type.key)) {
+      groups.set(type.key, { ...type, items: [] });
+    }
+
+    groups.get(type.key).items.push(product);
+  });
+
+  return [...groups.values()];
+};
+
+const getImage = (product) => product?.image || "/placeholder-product.jpg";
+
+const getPrice = (product) => Number(product?.finalPrice ?? product?.price ?? 0);
+
 const OutfitBuilder = () => {
   const navigate = useNavigate();
   const cart = useCart();
   const { showToast } = useToast();
 
   const [products, setProducts] = useState({
-    dresses: [],
-    formals: [],
     tops: [],
     bottoms: [],
     shoes: [],
     accessories: [],
   });
 
-  const [selectedItems, setSelectedItems] = useState([]);
-
-  const [activeCategory, setActiveCategory] = useState(null);
-
   const [loading, setLoading] = useState(true);
 
+  const [topFilter, setTopFilter] = useState("all");
+  const [selectedTop, setSelectedTop] = useState(null);
+  const [bottomType, setBottomType] = useState(null);
+  const [selectedBottom, setSelectedBottom] = useState(null);
+  const [selectedShoes, setSelectedShoes] = useState(null);
+  const [selectedAccessories, setSelectedAccessories] = useState([]);
+  const [completingLook, setCompletingLook] = useState(false);
+
+  const sectionRefs = {
+    top: useRef(null),
+    bottom: useRef(null),
+    shoes: useRef(null),
+    accessories: useRef(null),
+  };
+
   useEffect(() => {
+    const fetchCategory = async (endpoint) => {
+      try {
+        const { data } = await api.get(`/products/category/${endpoint}`);
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error(`Failed to load ${endpoint}:`, error);
+        return [];
+      }
+    };
+
     const fetchProducts = async () => {
       try {
         setLoading(true);
 
         const results = await Promise.all(
-          Object.entries(CATEGORY_ENDPOINTS).map(
-            async ([key, endpoint]) => {
-              try {
-                const { data } = await api.get(
-                  `/products/category/${endpoint}`
-                );
+          Object.entries(CATEGORY_ENDPOINTS).map(async ([key, endpoints]) => {
+            const lists = await Promise.all(endpoints.map(fetchCategory));
 
-                return [
-                  key,
-                  Array.isArray(data) ? data : [],
-                ];
-              } catch (error) {
-                console.error(
-                  `Failed to load ${key}:`,
-                  error
-                );
+            // A product can be listed under both "tops" and "formals".
+            const unique = new Map();
+            lists.flat().forEach((product) => unique.set(product._id, product));
 
-                return [key, []];
-              }
-            }
-          )
+            return [key, [...unique.values()]];
+          })
         );
 
         setProducts(Object.fromEntries(results));
@@ -114,252 +292,204 @@ const OutfitBuilder = () => {
 
   /*
    * -------------------------------------------------------
-   * RULE-BASED MATCHING
+   * STEP 1 - TOPS
    * -------------------------------------------------------
-   *
-   * These rules determine whether two products are
-   * compatible.
    */
-  const ruleBasedCompatibility = (
-    selectedProduct,
-    candidate
-  ) => {
-    if (!selectedProduct || !candidate) {
-      return {
-        compatible: false,
-        score: 0,
-      };
-    }
-
-    let score = 0;
-
-    const selectedColors = (
-      selectedProduct.colors || []
-    ).map((color) => color.toLowerCase());
-
-    const candidateColors = (
-      candidate.colors || []
-    ).map((color) => color.toLowerCase());
-
-    /*
-     * RULE 1
-     * Same color = strong compatibility
-     */
-    const sameColor = candidateColors.some((color) =>
-      selectedColors.includes(color)
+  const topFilters = useMemo(() => {
+    const present = new Set(
+      products.tops.map((product) => getSubtype(product, "tops").key)
     );
 
-    if (sameColor) {
-      score += 35;
+    const filters = SUBTYPES.tops.map(({ key, label }) => ({ key, label }));
+
+    if (present.has(OTHER_SUBTYPE.key)) {
+      filters.push(OTHER_SUBTYPE);
     }
 
-    /*
-     * RULE 2
-     * Neutral colors work with most colors.
-     */
-    const candidateHasNeutral = candidateColors.some(
-      (color) => neutralColors.includes(color)
-    );
+    return filters;
+  }, [products.tops]);
 
-    if (candidateHasNeutral) {
-      score += 20;
+  const visibleTops = useMemo(
+    () =>
+      topFilter === "all"
+        ? products.tops
+        : products.tops.filter(
+            (product) => getSubtype(product, "tops").key === topFilter
+          ),
+    [products.tops, topFilter]
+  );
+
+  /*
+   * -------------------------------------------------------
+   * STEP 2 - BOTTOMS (scored against the top)
+   * -------------------------------------------------------
+   */
+  const bottomGroups = useMemo(() => {
+    if (!selectedTop) return [];
+    return groupBySubtype(rankCandidates(products.bottoms, [selectedTop]), "bottoms");
+  }, [products.bottoms, selectedTop]);
+
+  const activeBottomGroup =
+    bottomGroups.find((group) => group.key === bottomType) || bottomGroups[0];
+
+  /*
+   * -------------------------------------------------------
+   * STEP 3 - SHOES (scored against top + bottom)
+   * -------------------------------------------------------
+   */
+  const shoeOptions = useMemo(() => {
+    if (!selectedTop || !selectedBottom) return [];
+    return rankCandidates(products.shoes, [selectedTop, selectedBottom]);
+  }, [products.shoes, selectedTop, selectedBottom]);
+
+  /*
+   * -------------------------------------------------------
+   * STEP 4 - ACCESSORIES (scored against top + bottom + shoes)
+   * -------------------------------------------------------
+   */
+  const accessoryOptions = useMemo(() => {
+    if (!selectedTop || !selectedBottom || !selectedShoes) return [];
+    return rankCandidates(products.accessories, [
+      selectedTop,
+      selectedBottom,
+      selectedShoes,
+    ]);
+  }, [products.accessories, selectedTop, selectedBottom, selectedShoes]);
+
+  /*
+   * -------------------------------------------------------
+   * SELECTION HANDLERS
+   * -------------------------------------------------------
+   * Changing an earlier step re-ranks every later step, so later
+   * selections are cleared to keep the outfit consistent.
+   */
+  const clearAfterTop = () => {
+    setBottomType(null);
+    setSelectedBottom(null);
+    setSelectedShoes(null);
+    setSelectedAccessories([]);
+  };
+
+  const selectTop = (product) => {
+    if (selectedTop?._id === product._id) {
+      setSelectedTop(null);
+    } else {
+      setSelectedTop(product);
     }
 
-    /*
-     * RULE 3
-     * Selected product has neutral color.
-     */
-    const selectedHasNeutral = selectedColors.some(
-      (color) => neutralColors.includes(color)
-    );
+    clearAfterTop();
+  };
 
-    if (selectedHasNeutral) {
-      score += 15;
+  const selectBottomType = (key) => {
+    setBottomType(key);
+
+    if (selectedBottom && getSubtype(selectedBottom, "bottoms").key !== key) {
+      setSelectedBottom(null);
+      setSelectedShoes(null);
+      setSelectedAccessories([]);
     }
+  };
 
-    /*
-     * RULE 4
-     * Product is available and in stock.
-     */
-    if (candidate.available !== false && candidate.stock > 0) {
-      score += 15;
-    }
+  const selectBottom = (product) => {
+    setSelectedBottom(selectedBottom?._id === product._id ? null : product);
+    setSelectedShoes(null);
+    setSelectedAccessories([]);
+  };
 
-    /*
-     * RULE 5
-     * Higher-rated products receive additional score.
-     */
-    const rating = Number(candidate.ratingAvg || 0);
-
-    if (rating >= 4.5) {
-      score += 15;
-    } else if (rating >= 4) {
-      score += 10;
-    } else if (rating >= 3) {
-      score += 5;
-    }
-
-    return {
-      compatible: score >= 30,
-      score: Math.min(score, 100),
-    };
+  const selectShoes = (product) => {
+    setSelectedShoes(selectedShoes?._id === product._id ? null : product);
+    setSelectedAccessories([]);
   };
 
   /*
-   * -------------------------------------------------------
-   * WEIGHTED SCORING
-   * -------------------------------------------------------
-   *
-   * When multiple products have already been selected,
-   * score the candidate against ALL selected products.
+   * Accessories are optional and multi-select, with one piece per
+   * accessory type (picking a second bag replaces the first).
    */
-  const calculateWeightedScore = (candidate) => {
-    if (!selectedItems.length) {
-      return 0;
-    }
-
-    let totalScore = 0;
-    let totalWeight = 0;
-
-    selectedItems.forEach((selectedProduct) => {
-      const result = ruleBasedCompatibility(
-        selectedProduct,
-        candidate
-      );
-
-      /*
-       * Newer selections have slightly more influence,
-       * while earlier selections still matter.
-       */
-      const weight =
-        selectedItems.indexOf(selectedProduct) + 1;
-
-      totalScore += result.score * weight;
-      totalWeight += weight;
-    });
-
-    if (!totalWeight) {
-      return 0;
-    }
-
-    return Math.round(totalScore / totalWeight);
-  };
-
-  /*
-   * -------------------------------------------------------
-   * RECOMMENDATIONS
-   * -------------------------------------------------------
-   *
-   * Recommendations are generated for every category that
-   * has NOT already been selected.
-   */
-  const recommendations = useMemo(() => {
-    if (!selectedItems.length) {
-      return {};
-    }
-
-    const selectedIds = selectedItems.map(
-      (item) => item._id
-    );
-
-    const result = {};
-
-    CATEGORY_ORDER.forEach((category) => {
-      const alreadySelected = selectedItems.some(
-        (item) => item.category === category
-      );
-
-      if (alreadySelected) {
-        return;
+  const toggleAccessory = (product) => {
+    setSelectedAccessories((previous) => {
+      if (previous.some((item) => item._id === product._id)) {
+        return previous.filter((item) => item._id !== product._id);
       }
 
-      const candidates = products[category] || [];
-
-      const scored = candidates
-        .filter(
-          (product) =>
-            !selectedIds.includes(product._id)
-        )
-        .map((product) => ({
-          ...product,
-          compatibilityScore:
-            calculateWeightedScore(product),
-        }))
-        .filter(
-          (product) =>
-            product.compatibilityScore >= 30
-        )
-        .sort(
-          (a, b) =>
-            b.compatibilityScore -
-            a.compatibilityScore
-        );
-
-      result[category] = scored.slice(0, 6);
-    });
-
-    return result;
-  }, [products, selectedItems]);
-
-  /*
-   * -------------------------------------------------------
-   * SELECT PRODUCT
-   * -------------------------------------------------------
-   */
-  const selectProduct = (product) => {
-    setSelectedItems((previous) => {
-      /*
-       * If the same product is already selected,
-       * don't add it again.
-       */
-      if (
-        previous.some(
-          (item) => item._id === product._id
-        )
-      ) {
-        return previous;
-      }
-
-      /*
-       * Only one product per category.
-       */
-      const withoutSameCategory =
-        previous.filter(
-          (item) =>
-            item.category !== product.category
-        );
+      const type = getSubtype(product, "accessories").key;
 
       return [
-        ...withoutSameCategory,
+        ...previous.filter(
+          (item) =>
+            type === OTHER_SUBTYPE.key ||
+            getSubtype(item, "accessories").key !== type
+        ),
         product,
       ];
     });
-
-    setActiveCategory(null);
   };
 
-  /*
-   * -------------------------------------------------------
-   * REMOVE PRODUCT
-   * -------------------------------------------------------
-   */
-  const removeProduct = (productId) => {
-    setSelectedItems((previous) =>
-      previous.filter(
-        (item) => item._id !== productId
-      )
-    );
-  };
-
-  /*
-   * -------------------------------------------------------
-   * RESET
-   * -------------------------------------------------------
-   */
   const resetBuilder = () => {
-    setSelectedItems([]);
-    setActiveCategory(null);
+    setSelectedTop(null);
+    setTopFilter("all");
+    clearAfterTop();
+    sectionRefs.top.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const scrollTo = (key) => {
+    sectionRefs[key].current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  /*
+   * -------------------------------------------------------
+   * OUTFIT SUMMARY
+   * -------------------------------------------------------
+   */
+  const selectedBag = selectedAccessories.find(
+    (item) => getSubtype(item, "accessories").key === "bag"
+  );
+
+  const otherAccessories = selectedAccessories.filter(
+    (item) => item !== selectedBag
+  );
+
+  const outfitPieces = [
+    selectedTop,
+    selectedBottom,
+    selectedShoes,
+    ...selectedAccessories,
+  ].filter(Boolean);
+
+  const totalPrice = outfitPieces.reduce(
+    (total, product) => total + getPrice(product),
+    0
+  );
+
+  const averageMatch = useMemo(() => {
+    const scored = [selectedBottom, selectedShoes, ...selectedAccessories]
+      .filter(Boolean)
+      .map((item) => item.compatibilityScore || 0);
+
+    if (!scored.length) return null;
+
+    return Math.round(
+      scored.reduce((sum, value) => sum + value, 0) / scored.length
+    );
+  }, [selectedBottom, selectedShoes, selectedAccessories]);
+
+  const outfitMessage = (() => {
+    if (!selectedTop) return "Pick a top to start building your look.";
+    if (!selectedBottom) return "Great choice! Now pick a matching bottom.";
+    if (!selectedShoes) return "Almost there - choose a pair of shoes.";
+    if (averageMatch >= 70) return "A stylish, balanced outfit — just for you!";
+    return "A fresh, easy-going outfit — just for you!";
+  })();
+
+  const summaryRows = [
+    { key: "top", label: "Top", items: selectedTop ? [selectedTop] : [] },
+    { key: "bottom", label: "Bottom", items: selectedBottom ? [selectedBottom] : [] },
+    { key: "shoes", label: "Shoes", items: selectedShoes ? [selectedShoes] : [] },
+    { key: "accessories", label: "Bag", items: selectedBag ? [selectedBag] : [] },
+    { key: "accessories", label: "Accessories", items: otherAccessories },
+  ];
 
   /*
    * -------------------------------------------------------
@@ -369,8 +499,6 @@ const OutfitBuilder = () => {
    * then redirects to checkout so the order summary there
    * reflects the completed outfit.
    */
-  const [completingLook, setCompletingLook] = useState(false);
-
   const handleCompleteLook = async () => {
     if (!localStorage.getItem("token")) {
       showToast("Log in to complete your look", "error");
@@ -381,7 +509,7 @@ const OutfitBuilder = () => {
     try {
       setCompletingLook(true);
 
-      for (const product of selectedItems) {
+      for (const product of outfitPieces) {
         await cart.addItem(product._id, 1);
       }
 
@@ -396,527 +524,361 @@ const OutfitBuilder = () => {
     }
   };
 
-  const getImage = (product) => {
-    if (!product?.image) {
-      return "/placeholder-product.jpg";
-    }
-
-    return product.image;
-  };
-
-  const getPrice = (product) => {
-    return Number(
-      product.finalPrice ?? product.price ?? 0
-    );
-  };
-
-  const totalPrice = selectedItems.reduce(
-    (total, product) =>
-      total + getPrice(product),
-    0
-  );
-
-  /*
-   * -------------------------------------------------------
-   * INITIAL SCREEN
-   * -------------------------------------------------------
-   */
-  if (!selectedItems.length) {
-    return (
-      <div className="outfit-builder-page">
-
-        <div className="outfit-builder-header">
-          <span className="outfit-eyebrow">
-            <Sparkles size={16} />
-            STYLE YOUR LOOK
-          </span>
-
-          <h1>Outfit Builder</h1>
-
-          <p>
-            Start with any piece you love and we'll find
-            compatible items to complete your look.
-          </p>
-        </div>
-
-        <div className="start-builder-card">
-
-          <div className="start-builder-heading">
-            <h2>Where would you like to start?</h2>
-
-            <p>
-              Choose any category. There is no required
-              starting point.
-            </p>
-          </div>
-
-          {loading ? (
-            <div className="outfit-loading">
-              Finding your fashion pieces...
-            </div>
-          ) : (
-            <div className="starting-category-grid">
-              {CATEGORY_ORDER.map((category) => (
-                <button
-                  key={category}
-                  className="starting-category-card"
-                  onClick={() =>
-                    setActiveCategory(category)
-                  }
-                >
-                  <div className="starting-category-image">
-                    {products[category]?.[0] ? (
-                      <img
-                        src={getImage(
-                          products[category][0]
-                        )}
-                        alt={CATEGORY_LABELS[category]}
-                      />
-                    ) : (
-                      <span>
-                        {CATEGORY_LABELS[
-                          category
-                        ][0]}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <strong>
-                      {CATEGORY_LABELS[category]}
-                    </strong>
-
-                    <small>
-                      {products[category]?.length || 0}{" "}
-                      items
-                    </small>
-                  </div>
-
-                  <ChevronRight size={18} />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {activeCategory && (
-          <div className="category-selection-modal">
-            <div className="category-selection-content">
-
-              <button
-                className="close-builder"
-                onClick={() =>
-                  setActiveCategory(null)
-                }
-              >
-                <X size={20} />
-              </button>
-
-              <span className="selection-step">
-                START WITH
-              </span>
-
-              <h2>
-                Choose a{" "}
-                {CATEGORY_LABELS[activeCategory]
-                  .toLowerCase()
-                  .slice(0, -1)}
-              </h2>
-
-              <div className="outfit-product-grid">
-                {(products[activeCategory] || []).map(
-                  (product) => (
-                    <ProductOption
-                      key={product._id}
-                      product={product}
-                      getImage={getImage}
-                      onSelect={selectProduct}
-                    />
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  /*
-   * -------------------------------------------------------
-   * BUILDER SCREEN
-   * -------------------------------------------------------
-   */
   return (
-    <div className="outfit-builder-page">
-
-      <div className="outfit-builder-header">
-
-        <div>
-          <span className="outfit-eyebrow">
-            <Sparkles size={16} />
-            YOUR PERSONAL STYLIST
-          </span>
-
-          <h1>Build Your Look</h1>
-
-          <p>
-            Your selections are being matched using
-            compatibility rules and weighted scoring.
-          </p>
-        </div>
-
-        <button
-          className="reset-builder-button"
-          onClick={resetBuilder}
-        >
-          <RotateCcw size={16} />
-          Start Over
-        </button>
-      </div>
-
-      <SuggestedOutfits anchorItem={selectedItems[0]} />
-
-      <div className="outfit-builder-content">
-
-        {/* LEFT */}
-        <div className="outfit-selection-area">
-
-          <div className="selected-summary">
-
+    <div className="ob-page">
+      <div className="ob-layout">
+        {/* ================= LEFT: STEPS ================= */}
+        <div className="ob-main">
+          <header className="ob-header">
             <div>
-              <span className="selection-step">
-                YOUR SELECTIONS
-              </span>
-
-              <h2>
-                Your Outfit
-              </h2>
-            </div>
-
-            <span>
-              {selectedItems.length}{" "}
-              {selectedItems.length === 1
-                ? "piece"
-                : "pieces"}
-            </span>
-          </div>
-
-          <div className="selected-products-row">
-            {selectedItems.map((product) => (
-              <div
-                className="selected-product-chip"
-                key={product._id}
-              >
-                <img
-                  src={getImage(product)}
-                  alt={product.name}
-                />
-
-                <div>
-                  <strong>
-                    {product.name}
-                  </strong>
-
-                  <small>
-                    {CATEGORY_LABELS[
-                      product.category
-                    ]}
-                  </small>
-                </div>
-
-                <button
-                  onClick={() =>
-                    removeProduct(product._id)
-                  }
-                >
-                  <X size={15} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="recommendation-heading">
-            <div>
-              <span className="selection-step">
-                SMART RECOMMENDATIONS
-              </span>
-
-              <h2>
-                Complete Your Look
-              </h2>
-
+              <h1>Outfit Builder</h1>
               <p>
-                Items below are ranked using your
-                compatibility score.
+                Pick a top, and we'll suggest the best matching bottoms, shoes
+                and accessories for a stylish complete look!
               </p>
             </div>
-          </div>
 
-          {Object.keys(recommendations).map(
-            (category) => {
-              const items =
-                recommendations[category] || [];
+            {selectedTop && (
+              <button type="button" className="ob-reset" onClick={resetBuilder}>
+                <RotateCcw size={15} />
+                Start Over
+              </button>
+            )}
+          </header>
 
-              if (!items.length) {
-                return null;
-              }
+          {/* STEP 1 - TOP */}
+          <section className="ob-step" ref={sectionRefs.top}>
+            <StepTitle number={1} title="Select a" highlight="TOP" />
 
-              return (
-                <section
-                  className="recommendation-section"
-                  key={category}
-                >
-                  <div className="recommendation-category-heading">
-                    <h3>
-                      {CATEGORY_LABELS[category]}
-                    </h3>
+            {loading ? (
+              <div className="ob-status">Finding your fashion pieces...</div>
+            ) : (
+              <>
+                <div className="ob-filters">
+                  <button
+                    type="button"
+                    className={topFilter === "all" ? "active" : ""}
+                    onClick={() => setTopFilter("all")}
+                  >
+                    All
+                  </button>
 
-                    <span>
-                      Recommended for you
-                    </span>
-                  </div>
+                  {topFilters.map((filter) => (
+                    <button
+                      type="button"
+                      key={filter.key}
+                      className={topFilter === filter.key ? "active" : ""}
+                      onClick={() => setTopFilter(filter.key)}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
 
-                  <div className="outfit-product-grid">
-                    {items.map((product) => (
-                      <ProductOption
+                {visibleTops.length ? (
+                  <div className="ob-grid">
+                    {visibleTops.map((product) => (
+                      <OptionCard
                         key={product._id}
-                        product={product}
-                        getImage={getImage}
-                        onSelect={selectProduct}
-                        showScore
+                        image={getImage(product)}
+                        label={product.name}
+                        selected={selectedTop?._id === product._id}
+                        onClick={() => selectTop(product)}
                       />
                     ))}
                   </div>
-                </section>
-              );
-            }
-          )}
+                ) : (
+                  <div className="ob-status">No tops in this style yet.</div>
+                )}
 
-          <div className="manual-add-section">
-            <span>
-              Want something different?
-            </span>
+                {selectedTop && (
+                  <div className="ob-info">
+                    <Sparkles size={18} />
+                    <p>
+                      We'll now find compatible bottoms using a rule-based
+                      matching system + weighted sum model.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
 
-            <div className="manual-category-buttons">
-              {CATEGORY_ORDER.map((category) => {
-                const alreadySelected =
-                  selectedItems.some(
-                    (item) =>
-                      item.category === category
-                  );
+          {/* STEP 2 - BOTTOMS */}
+          <section
+            className={`ob-step ${selectedTop ? "" : "locked"}`}
+            ref={sectionRefs.bottom}
+          >
+            <StepTitle number={2} title="Compatible" highlight="BOTTOMS" />
 
-                if (alreadySelected) {
-                  return null;
-                }
+            {!selectedTop ? (
+              <div className="ob-status">Select a top to see matching bottoms.</div>
+            ) : !bottomGroups.length ? (
+              <div className="ob-status">
+                No compatible bottoms found for this top. Try another top.
+              </div>
+            ) : (
+              <>
+                <div className="ob-grid">
+                  {bottomGroups.map((group) => (
+                    <OptionCard
+                      key={group.key}
+                      image={getImage(group.items[0])}
+                      label={group.label}
+                      badge={`${group.items[0].compatibilityScore}%`}
+                      selected={activeBottomGroup?.key === group.key}
+                      onClick={() => selectBottomType(group.key)}
+                    />
+                  ))}
+                </div>
 
-                return (
-                  <button
-                    key={category}
-                    onClick={() =>
-                      setActiveCategory(category)
-                    }
-                  >
-                    +{" "}
-                    {CATEGORY_LABELS[category]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                <div className="ob-arrow">
+                  <ArrowDown size={16} />
+                </div>
 
+                <div className="ob-subpanel">
+                  <h3>Select a bottom</h3>
+
+                  <Carousel>
+                    {activeBottomGroup.items.map((product) => (
+                      <OptionCard
+                        key={product._id}
+                        image={getImage(product)}
+                        label={product.name}
+                        badge={`${product.compatibilityScore}%`}
+                        selected={selectedBottom?._id === product._id}
+                        onClick={() => selectBottom(product)}
+                        compact
+                      />
+                    ))}
+                  </Carousel>
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* STEP 3 - SHOES */}
+          <section
+            className={`ob-step ${selectedBottom ? "" : "locked"}`}
+            ref={sectionRefs.shoes}
+          >
+            <StepTitle number={3} title="Compatible" highlight="SHOES" />
+
+            {!selectedBottom ? (
+              <div className="ob-status">Select a bottom to see matching shoes.</div>
+            ) : !shoeOptions.length ? (
+              <div className="ob-status">No compatible shoes found for this look.</div>
+            ) : (
+              <>
+                <div className="ob-grid">
+                  {shoeOptions.map((product) => (
+                    <OptionCard
+                      key={product._id}
+                      image={getImage(product)}
+                      label={product.name}
+                      badge={`${product.compatibilityScore}%`}
+                      selected={selectedShoes?._id === product._id}
+                      onClick={() => selectShoes(product)}
+                    />
+                  ))}
+                </div>
+
+                <p className="ob-hint">Select a shoe</p>
+              </>
+            )}
+          </section>
+
+          {/* STEP 4 - ACCESSORIES */}
+          <section
+            className={`ob-step ${selectedShoes ? "" : "locked"}`}
+            ref={sectionRefs.accessories}
+          >
+            <StepTitle number={4} title="Compatible" highlight="ACCESSORIES" />
+
+            {!selectedShoes ? (
+              <div className="ob-status">Select shoes to see matching accessories.</div>
+            ) : !accessoryOptions.length ? (
+              <div className="ob-status">No compatible accessories found for this look.</div>
+            ) : (
+              <>
+                <div className="ob-grid ob-grid-small">
+                  {accessoryOptions.map((product) => (
+                    <OptionCard
+                      key={product._id}
+                      image={getImage(product)}
+                      label={product.name}
+                      badge={`${product.compatibilityScore}%`}
+                      selected={selectedAccessories.some(
+                        (item) => item._id === product._id
+                      )}
+                      onClick={() => toggleAccessory(product)}
+                    />
+                  ))}
+                </div>
+
+                <p className="ob-hint">Select accessories (optional)</p>
+              </>
+            )}
+          </section>
         </div>
 
-        {/* RIGHT PREVIEW */}
-        <aside className="outfit-preview">
+        {/* ================= RIGHT: OUTFIT PREVIEW ================= */}
+        <aside className="ob-preview">
+          <h2>Your Complete Outfit</h2>
 
-          <div className="preview-header">
-            <div>
-              <span>YOUR STYLE</span>
+          <div className="ob-collage">
+            {outfitPieces.length ? (
+              <>
+                <div className="ob-collage-main">
+                  {selectedTop && <img src={getImage(selectedTop)} alt={selectedTop.name} />}
+                  {selectedBottom && (
+                    <img src={getImage(selectedBottom)} alt={selectedBottom.name} />
+                  )}
+                </div>
 
-              <h2>
-                Complete Look
-              </h2>
-            </div>
-
-            <Sparkles
-              size={21}
-            />
+                <div className="ob-collage-side">
+                  {otherAccessories.map((item) => (
+                    <img key={item._id} src={getImage(item)} alt={item.name} />
+                  ))}
+                  {selectedBag && <img src={getImage(selectedBag)} alt={selectedBag.name} />}
+                  {selectedShoes && (
+                    <img src={getImage(selectedShoes)} alt={selectedShoes.name} />
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="ob-collage-empty">
+                <Shirt size={40} />
+                <span>Your outfit will appear here</span>
+              </div>
+            )}
           </div>
 
-          <div className="preview-items">
+          <h3>Items Selected</h3>
 
-            {selectedItems.map((product) => (
-              <div
-                className="preview-item has-product"
-                key={product._id}
+          <div className="ob-summary">
+            {summaryRows.map((row) => (
+              <button
+                type="button"
+                key={row.label}
+                className={`ob-summary-row ${row.items.length ? "" : "empty"}`}
+                onClick={() => scrollTo(row.key)}
               >
-                <img
-                  src={getImage(product)}
-                  alt={product.name}
-                />
+                <div className="ob-summary-thumb">
+                  {row.items[0] ? (
+                    <img src={getImage(row.items[0])} alt={row.items[0].name} />
+                  ) : (
+                    <span>—</span>
+                  )}
+                </div>
 
-                <div className="preview-item-details">
-                  <span>
-                    {CATEGORY_LABELS[
-                      product.category
-                    ]}
-                  </span>
-
-                  <strong>
-                    {product.name}
-                  </strong>
-
+                <div className="ob-summary-text">
+                  <strong>{row.label}</strong>
                   <small>
-                    Rs.{" "}
-                    {getPrice(
-                      product
-                    ).toLocaleString()}
+                    {row.items.length
+                      ? row.items.map((item) => item.name).join(" + ")
+                      : "Not selected"}
                   </small>
                 </div>
 
-                <Check
-                  className="preview-check"
-                  size={18}
-                />
-              </div>
+                <ChevronRight size={16} />
+              </button>
             ))}
-
           </div>
 
-          <div className="preview-message">
-            <Sparkles size={16} />
-
-            <p>
-              Your look is complete with the pieces
-              you've chosen.
-            </p>
-          </div>
-
-          <div className="preview-total">
-            <span>
-              Estimated Total
-            </span>
-
-            <strong>
-              Rs.{" "}
-              {totalPrice.toLocaleString()}
-            </strong>
-          </div>
-
-          <button
-            className="generate-outfit-button"
-            onClick={handleCompleteLook}
-            disabled={completingLook}
-          >
+          <div className="ob-message">
             <Sparkles size={18} />
-            {completingLook ? "Adding to cart..." : "Complete Look"}
-          </button>
-
-          <div className="complete-outfit-preview">
-            <h3>
-              ✨ Your look is ready
-            </h3>
-
             <p>
-              You can keep adding recommended pieces
-              or use your current selection as your
-              complete outfit.
+              {outfitMessage}
+              {averageMatch !== null && (
+                <small>Overall match score: {averageMatch}%</small>
+              )}
             </p>
           </div>
 
+          {selectedTop && (
+            <>
+              <div className="ob-total">
+                <span>Estimated Total</span>
+                <strong>Rs. {totalPrice.toLocaleString()}</strong>
+              </div>
+
+              <button
+                type="button"
+                className="ob-complete"
+                onClick={handleCompleteLook}
+                disabled={completingLook || !selectedBottom || !selectedShoes}
+              >
+                <Sparkles size={17} />
+                {completingLook
+                  ? "Adding to cart..."
+                  : selectedBottom && selectedShoes
+                    ? "Complete Look"
+                    : "Pick a bottom & shoes to finish"}
+              </button>
+            </>
+          )}
         </aside>
       </div>
-
-      {activeCategory && (
-        <div className="category-selection-modal">
-
-          <div className="category-selection-content">
-
-            <button
-              className="close-builder"
-              onClick={() =>
-                setActiveCategory(null)
-              }
-            >
-              <X size={20} />
-            </button>
-
-            <span className="selection-step">
-              ADD TO YOUR LOOK
-            </span>
-
-            <h2>
-              Choose{" "}
-              {CATEGORY_LABELS[activeCategory]}
-            </h2>
-
-            <div className="outfit-product-grid">
-              {(products[activeCategory] || []).map(
-                (product) => (
-                  <ProductOption
-                    key={product._id}
-                    product={product}
-                    getImage={getImage}
-                    onSelect={selectProduct}
-                  />
-                )
-              )}
-            </div>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-const ProductOption = ({
-  product,
-  getImage,
-  onSelect,
-  showScore = false,
-}) => {
-  return (
-    <div
-      className="outfit-product-card"
-      onClick={() => onSelect(product)}
-    >
-      <div className="outfit-product-image">
+const StepTitle = ({ number, title, highlight }) => (
+  <div className="ob-step-title">
+    <span className="ob-step-number">{number}</span>
+    <h2>
+      {title} <em>{highlight}</em>
+    </h2>
+  </div>
+);
 
-        <img
-          src={getImage(product)}
-          alt={product.name}
-        />
+const OptionCard = ({ image, label, badge, selected, onClick, compact = false }) => (
+  <button
+    type="button"
+    className={`ob-card ${selected ? "selected" : ""} ${compact ? "compact" : ""}`}
+    onClick={onClick}
+    title={label}
+  >
+    <div className="ob-card-image">
+      <img src={image} alt={label} />
 
-        {showScore && (
-          <span className="match-badge">
-            {product.compatibilityScore}% match
-          </span>
-        )}
-
-      </div>
-
-      <div className="outfit-product-info">
-
-        <span className="outfit-product-category">
-          {CATEGORY_LABELS[product.category]}
+      {selected && (
+        <span className="ob-card-check">
+          <Check size={12} strokeWidth={3} />
         </span>
+      )}
 
-        <h3>
-          {product.name}
-        </h3>
+      {badge && <span className="ob-card-badge">{badge} match</span>}
+    </div>
 
-        <strong>
-          Rs.{" "}
-          {Number(
-            product.finalPrice ??
-              product.price ??
-              0
-          ).toLocaleString()}
-        </strong>
+    {!compact && <span className="ob-card-label">{label}</span>}
+  </button>
+);
 
+const Carousel = ({ children }) => {
+  const trackRef = useRef(null);
+
+  const scroll = (direction) => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    track.scrollBy({ left: direction * track.clientWidth * 0.8, behavior: "smooth" });
+  };
+
+  return (
+    <div className="ob-carousel">
+      <button type="button" className="ob-carousel-nav" onClick={() => scroll(-1)} aria-label="Previous">
+        <ChevronLeft size={18} />
+      </button>
+
+      <div className="ob-carousel-track" ref={trackRef}>
+        {children}
       </div>
+
+      <button type="button" className="ob-carousel-nav" onClick={() => scroll(1)} aria-label="Next">
+        <ChevronRight size={18} />
+      </button>
     </div>
   );
 };

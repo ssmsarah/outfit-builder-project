@@ -26,10 +26,16 @@ describe("generatePersonalizedOutfits - output shape", () => {
     }
   });
 
-  it("at coldStart alpha (1.0), finalScore equals compatibilityScore exactly", () => {
+  // I7.3 changed this intentionally: FinalScore = alpha * C_adjusted + (1 - alpha) * P,
+  // so at alpha 1.0 it equals the rule-adjusted compatibility, not T2.8's raw score.
+  it("at coldStart alpha (1.0), finalScore equals the rule-adjusted compatibility exactly", () => {
     const results = generatePersonalizedOutfits(wardrobeById.black_tshirt, wardrobe, context, coldStartPersonalization);
     for (const outfit of results) {
-      expect(outfit.finalScore).toBeCloseTo(outfit.compatibilityScore, 10);
+      expect(outfit.finalScore).toBeCloseTo(outfit.adjustedCompatibilityScore, 10);
+      expect(outfit.adjustedCompatibilityScore).toBeCloseTo(
+        Math.min(1, Math.max(0, outfit.compatibilityScore + outfit.ruleAdjustment)),
+        10
+      );
     }
   });
 

@@ -65,12 +65,18 @@ describe("getOutfitRecommendations - real DB integration", () => {
     await Product.create(productData({ name: "Bottom", category: ["bottoms"], seller: seller._id, colors: ["blue"] }));
     await Product.create(productData({ name: "Shoes", category: ["shoes"], seller: seller._id, colors: ["white"] }));
 
-    const outfits = await getOutfitRecommendations({ anchorItemId: top._id.toString(), occasion: "casual" });
+    const { outfits } = await getOutfitRecommendations({ anchorItemId: top._id.toString(), occasion: "casual" });
 
     expect(outfits.length).toBeGreaterThan(0);
     for (const outfit of outfits) {
       expect(outfit.alpha).toBe(1.0);
-      expect(outfit.finalScore).toBe(outfit.compatibilityScore); // coldStart collapse, per T3.6
+      // coldStart collapse, per T3.6. Since I7.3 the final score uses the
+      // rule-adjusted compatibility: C_adjusted = clamp01(C + ruleAdjustment).
+      expect(outfit.finalScore).toBe(outfit.adjustedCompatibilityScore);
+      expect(outfit.adjustedCompatibilityScore).toBeCloseTo(
+        Math.min(1, Math.max(0, outfit.compatibilityScore + outfit.ruleAdjustment)),
+        10
+      );
       expect(outfit.products.length).toBe(outfit.items.length);
     }
   });
@@ -86,7 +92,7 @@ describe("getOutfitRecommendations - real DB integration", () => {
       productData({ name: "Pending Bottom", category: ["bottoms"], seller: pendingSeller._id, colors: ["blue"] })
     );
 
-    const outfits = await getOutfitRecommendations({ anchorItemId: top._id.toString() });
+    const { outfits } = await getOutfitRecommendations({ anchorItemId: top._id.toString() });
 
     const usedProductIds = outfits.flatMap((o) => o.items);
     expect(usedProductIds).not.toContain(pendingBottom._id.toString());
@@ -102,7 +108,7 @@ describe("getOutfitRecommendations - real DB integration", () => {
 
     // No available shoes at all -> generateOutfits should return [], not throw
     // (T2.7's "returns fewer than topN without error" behavior).
-    const outfits = await getOutfitRecommendations({ anchorItemId: top._id.toString() });
+    const { outfits } = await getOutfitRecommendations({ anchorItemId: top._id.toString() });
     const usedProductIds = outfits.flatMap((o) => o.items);
     expect(usedProductIds).not.toContain(unavailableShoes._id.toString());
     expect(outfits).toEqual([]);
@@ -126,7 +132,7 @@ describe("getOutfitRecommendations - real DB integration", () => {
     await logInteraction({ userId: customer._id, itemId: lovedBottom._id, type: "view" });
     await logInteraction({ userId: customer._id, itemId: lovedBottom._id, type: "view" });
 
-    const outfits = await getOutfitRecommendations({
+    const { outfits } = await getOutfitRecommendations({
       anchorItemId: top._id.toString(),
       userId: customer._id,
     });
