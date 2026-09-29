@@ -22,6 +22,7 @@ import Checkout from "./features/checkout/pages/Checkout";
 import OrderConfirmation from "./features/orders/pages/OrderConfirmation";
 import MyOrders from "./features/orders/pages/MyOrders";
 import OutfitBuilder from "./features/outfitBuilder/pages/OutfitBuilder";
+import SavedOutfits from "./features/outfitBuilder/pages/SavedOutfits";
 
 function App() {
   return (
@@ -74,6 +75,7 @@ function App() {
 
   {/* Outfit Builder */}
   <Route path="/outfit-builder" element={<OutfitBuilder />} />
+  <Route path="/saved-outfits" element={<SavedOutfits />} />
 </Route>
 
     </Routes>
