@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { useWishlist } from "../../../context/WishlistContext";
 import { useCart } from "../../../context/CartContext";
-import { getImageUrl } from "../../../utils/getImageUrl";
+import { getImageUrl, handleImageError } from "../../../utils/getImageUrl";
 import "../../cart/pages/Cart.css";
 import "./Wishlist.css";
 
@@ -47,6 +47,7 @@ const Wishlist = () => {
               <img
                 src={getImageUrl(product.image)}
                 alt={product.name}
+                onError={handleImageError}
                 onClick={() => navigate(`/product/${product._id}`)}
               />
 

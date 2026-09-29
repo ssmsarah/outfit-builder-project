@@ -5,7 +5,7 @@ import api from "../../../api/axios";
 import { searchItems } from "../../../api/searchApi";
 import ProductCard from "../../../components/ProductCard";
 import OutfitSuggestions from "../components/OutfitSuggestions";
-import { getImageUrl } from "../../../utils/getImageUrl";
+import { getImageUrl, handleImageError } from "../../../utils/getImageUrl";
 import "../../stores/pages/Stores.css";
 import "./SearchResults.css";
 
@@ -169,7 +169,7 @@ const SearchResults = () => {
               return (
                 <article className="search-result-card" key={item._id}>
                   <Link to={`/product/${item._id}`} className="search-result-image">
-                    <img src={getImageUrl(item.image)} alt={item.name} />
+                    <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
                     <span className="search-result-score">{Math.round(hybridScore * 100)}% match</span>
                   </Link>
 
