@@ -596,6 +596,33 @@
   cursor: not-allowed;
 }
 
+.ob-save {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--ob-purple-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ob-purple);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ob-save:hover:not(:disabled) {
+  background: var(--ob-purple-soft);
+}
+
+.ob-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */

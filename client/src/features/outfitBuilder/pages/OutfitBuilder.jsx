@@ -8,12 +8,14 @@ import {
   RotateCcw,
   ArrowDown,
   Shirt,
+  Bookmark,
 } from "lucide-react";
 
 import api from "../../../api/axios";
 import { getImageUrl, PLACEHOLDER_IMAGE, handleImageError } from "../../../utils/getImageUrl";
 import { useCart } from "../../../context/CartContext";
 import { useToast } from "../../../context/ToastContext";
+import { useSavedOutfits } from "../../../context/SavedOutfitsContext";
 
 import "./OutfitBuilder.css";
 
@@ -240,7 +242,10 @@ const getPrice = (product) => Number(product?.finalPrice ?? product?.price ?? 0)
 const OutfitBuilder = () => {
   const navigate = useNavigate();
   const cart = useCart();
+  const savedOutfits = useSavedOutfits();
   const { showToast } = useToast();
+
+  const [savingOutfit, setSavingOutfit] = useState(false);
 
   const [products, setProducts] = useState({
     tops: [],
@@ -581,6 +586,43 @@ const OutfitBuilder = () => {
       );
     } finally {
       setCompletingLook(false);
+    }
+  };
+
+  /*
+   * -------------------------------------------------------
+   * SAVE OUTFIT -> DRAFT COLLECTION
+   * -------------------------------------------------------
+   * Stores the current selection as a named draft the user can revisit
+   * later from "My Saved Outfits", without adding anything to the cart.
+   */
+  const handleSaveOutfit = async () => {
+    if (!localStorage.getItem("token")) {
+      showToast("Log in to save this outfit", "error");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setSavingOutfit(true);
+
+      await savedOutfits.save({
+        name: `${selectedTop.name} Look`,
+        top: selectedTop._id,
+        isDress: isDressSelected,
+        bottom: selectedBottom?._id,
+        shoes: selectedShoes._id,
+        accessories: selectedAccessories.map((item) => item._id),
+      });
+
+      showToast("Outfit saved! View it in My Saved Outfits.", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Couldn't save this outfit",
+        "error"
+      );
+    } finally {
+      setSavingOutfit(false);
     }
   };
 
@@ -961,6 +1003,18 @@ const OutfitBuilder = () => {
                       ? "Pick shoes to finish"
                       : "Pick a bottom & shoes to finish"}
               </button>
+
+              {readyForShoes && selectedShoes && (
+                <button
+                  type="button"
+                  className="ob-save"
+                  onClick={handleSaveOutfit}
+                  disabled={savingOutfit}
+                >
+                  <Bookmark size={16} />
+                  {savingOutfit ? "Saving..." : "Save Outfit"}
+                </button>
+              )}
             </>
           )}
         </aside>

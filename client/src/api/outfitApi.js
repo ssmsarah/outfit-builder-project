@@ -32,3 +32,21 @@ export const saveOutfitItems = async (itemIds) => {
   const { data } = await api.post("/interactions/save", { itemIds });
   return data;
 };
+
+// Outfit Builder "Save Outfit" drafts - a named collection of the pieces
+// picked in the builder (top/dress + bottom + shoes + accessories), so the
+// user can come back and view/re-shop it later from "My Saved Outfits".
+export const getSavedOutfits = async () => {
+  const { data } = await api.get("/outfits/saved");
+  return data;
+};
+
+export const saveOutfit = async (outfit) => {
+  const { data } = await api.post("/outfits/saved", outfit);
+  return data;
+};
+
+export const deleteSavedOutfit = async (id) => {
+  const { data } = await api.delete(`/outfits/saved/${id}`);
+  return data;
+};

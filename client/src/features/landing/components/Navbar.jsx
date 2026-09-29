@@ -8,11 +8,13 @@ import {
   Store,
   Package,
   PackageSearch,
+  Shirt,
 } from "lucide-react";
 
 import logo from "../../../assets/shopea.png";
 import { useCart } from "../../../context/CartContext";
 import { useWishlist } from "../../../context/WishlistContext";
+import { useSavedOutfits } from "../../../context/SavedOutfitsContext";
 import "./Navbar.css";
 
 const Navbar = () => {
@@ -32,6 +34,7 @@ const Navbar = () => {
 
   const cart = useCart();
   const wishlist = useWishlist();
+  const savedOutfits = useSavedOutfits();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -39,6 +42,7 @@ const Navbar = () => {
 
     cart?.refresh();
     wishlist?.refresh();
+    savedOutfits?.refresh();
 
     navigate("/");
   };
@@ -154,6 +158,22 @@ const Navbar = () => {
                 {wishlist?.items?.length > 0 && (
                   <span className="icon-badge">
                     {wishlist.items.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Saved Outfits */}
+              <button
+                type="button"
+                className="customer-icon-btn"
+                onClick={() => navigate("/saved-outfits")}
+                title="Saved Outfits"
+                aria-label="Saved Outfits"
+              >
+                <Shirt size={19} strokeWidth={1.9} />
+                {savedOutfits?.items?.length > 0 && (
+                  <span className="icon-badge">
+                    {savedOutfits.items.length}
                   </span>
                 )}
               </button>
