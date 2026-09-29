@@ -50,6 +50,12 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
+    gender: {
+      type: String,
+      enum: ["male", "female", "unisex"],
+      default: "unisex",
+    },
+
     // Seller who owns this product
     seller: {
       type: mongoose.Schema.Types.ObjectId,

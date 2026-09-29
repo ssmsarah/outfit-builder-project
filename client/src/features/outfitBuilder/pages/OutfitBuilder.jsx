@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import api from "../../../api/axios";
-import { getImageUrl } from "../../../utils/getImageUrl";
+import { getImageUrl, PLACEHOLDER_IMAGE, handleImageError } from "../../../utils/getImageUrl";
 import { useCart } from "../../../context/CartContext";
 import { useToast } from "../../../context/ToastContext";
 
@@ -20,9 +20,11 @@ import "./OutfitBuilder.css";
 /*
  * Tops come from both the "tops" and "formals" marketplace categories
  * (formals are mostly shirts/blazers - see outfitAttributeDefaults.js).
+ * Full dresses are fetched separately so they never mix into the tops grid.
  */
 const CATEGORY_ENDPOINTS = {
   tops: ["tops", "formals"],
+  dresses: ["dresses"],
   bottoms: ["bottoms"],
   shoes: ["shoes"],
   accessories: ["accessories"],
@@ -193,14 +195,22 @@ const calculateWeightedScore = (candidate, chosenItems) => {
   return totalWeight ? Math.round(totalScore / totalWeight) : 0;
 };
 
-const rankCandidates = (candidates, chosenItems) =>
+/*
+ * minScore defaults to MATCH_THRESHOLD (used for shoes/accessories, where a
+ * short, curated list makes sense). Bottoms pass minScore: 0 so every
+ * available bottom is shown, ranked by score rather than hidden by it.
+ */
+const rankCandidates = (candidates, chosenItems, minScore = MATCH_THRESHOLD) =>
   candidates
     .map((product) => ({
       ...product,
       compatibilityScore: calculateWeightedScore(product, chosenItems),
     }))
-    .filter((product) => product.compatibilityScore >= MATCH_THRESHOLD)
+    .filter((product) => product.compatibilityScore >= minScore)
     .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+
+const matchesGender = (product, gender) =>
+  gender === "all" || !product.gender || product.gender === "unisex" || product.gender === gender;
 
 /*
  * Groups ranked products by sub-type. Groups are ordered by their best
@@ -223,7 +233,7 @@ const groupBySubtype = (ranked, group) => {
 };
 
 const getImage = (product) =>
-  product?.image ? getImageUrl(product.image) : "/placeholder-product.jpg";
+  product?.image ? getImageUrl(product.image) : PLACEHOLDER_IMAGE;
 
 const getPrice = (product) => Number(product?.finalPrice ?? product?.price ?? 0);
 
@@ -234,6 +244,7 @@ const OutfitBuilder = () => {
 
   const [products, setProducts] = useState({
     tops: [],
+    dresses: [],
     bottoms: [],
     shoes: [],
     accessories: [],
@@ -241,8 +252,11 @@ const OutfitBuilder = () => {
 
   const [loading, setLoading] = useState(true);
 
+  const [topMode, setTopMode] = useState("tops");
   const [topFilter, setTopFilter] = useState("all");
   const [selectedTop, setSelectedTop] = useState(null);
+  const [isDressSelected, setIsDressSelected] = useState(false);
+  const [bottomGender, setBottomGender] = useState("all");
   const [bottomType, setBottomType] = useState(null);
   const [selectedBottom, setSelectedBottom] = useState(null);
   const [selectedShoes, setSelectedShoes] = useState(null);
@@ -294,12 +308,25 @@ const OutfitBuilder = () => {
 
   /*
    * -------------------------------------------------------
-   * STEP 1 - TOPS
+   * STEP 1 - TOPS / DRESSES
    * -------------------------------------------------------
+   * "Tops" and "Full Dresses" are kept as two separate lists so a dress
+   * never shows up while picking a top (and vice versa), even if a seller
+   * mistakenly tagged a product with both categories.
    */
+  const wearableTops = useMemo(
+    () => products.tops.filter((product) => !product.category?.includes("dresses")),
+    [products.tops]
+  );
+
+  const wearableDresses = useMemo(
+    () => products.dresses.filter((product) => product.category?.includes("dresses")),
+    [products.dresses]
+  );
+
   const topFilters = useMemo(() => {
     const present = new Set(
-      products.tops.map((product) => getSubtype(product, "tops").key)
+      wearableTops.map((product) => getSubtype(product, "tops").key)
     );
 
     const filters = SUBTYPES.tops.map(({ key, label }) => ({ key, label }));
@@ -309,40 +336,55 @@ const OutfitBuilder = () => {
     }
 
     return filters;
-  }, [products.tops]);
+  }, [wearableTops]);
 
   const visibleTops = useMemo(
     () =>
       topFilter === "all"
-        ? products.tops
-        : products.tops.filter(
+        ? wearableTops
+        : wearableTops.filter(
             (product) => getSubtype(product, "tops").key === topFilter
           ),
-    [products.tops, topFilter]
+    [wearableTops, topFilter]
   );
 
   /*
    * -------------------------------------------------------
    * STEP 2 - BOTTOMS (scored against the top)
    * -------------------------------------------------------
+   * Dresses are a complete outfit on their own, so this step is skipped
+   * when a dress is selected. minScore: 0 means every bottom that matches
+   * the gender filter is shown - the score only decides sort order/badge,
+   * it never hides an item.
    */
+  const genderFilteredBottoms = useMemo(
+    () => products.bottoms.filter((product) => matchesGender(product, bottomGender)),
+    [products.bottoms, bottomGender]
+  );
+
   const bottomGroups = useMemo(() => {
-    if (!selectedTop) return [];
-    return groupBySubtype(rankCandidates(products.bottoms, [selectedTop]), "bottoms");
-  }, [products.bottoms, selectedTop]);
+    if (!selectedTop || isDressSelected) return [];
+    return groupBySubtype(
+      rankCandidates(genderFilteredBottoms, [selectedTop], 0),
+      "bottoms"
+    );
+  }, [genderFilteredBottoms, selectedTop, isDressSelected]);
 
   const activeBottomGroup =
     bottomGroups.find((group) => group.key === bottomType) || bottomGroups[0];
 
   /*
    * -------------------------------------------------------
-   * STEP 3 - SHOES (scored against top + bottom)
+   * STEP 3 - SHOES (scored against the outfit so far)
    * -------------------------------------------------------
    */
+  const outfitBase = [selectedTop, selectedBottom].filter(Boolean);
+  const readyForShoes = isDressSelected ? !!selectedTop : !!selectedTop && !!selectedBottom;
+
   const shoeOptions = useMemo(() => {
-    if (!selectedTop || !selectedBottom) return [];
-    return rankCandidates(products.shoes, [selectedTop, selectedBottom]);
-  }, [products.shoes, selectedTop, selectedBottom]);
+    if (!readyForShoes) return [];
+    return rankCandidates(products.shoes, outfitBase);
+  }, [products.shoes, readyForShoes, selectedTop, selectedBottom]);
 
   /*
    * -------------------------------------------------------
@@ -350,13 +392,9 @@ const OutfitBuilder = () => {
    * -------------------------------------------------------
    */
   const accessoryOptions = useMemo(() => {
-    if (!selectedTop || !selectedBottom || !selectedShoes) return [];
-    return rankCandidates(products.accessories, [
-      selectedTop,
-      selectedBottom,
-      selectedShoes,
-    ]);
-  }, [products.accessories, selectedTop, selectedBottom, selectedShoes]);
+    if (!readyForShoes || !selectedShoes) return [];
+    return rankCandidates(products.accessories, [...outfitBase, selectedShoes]);
+  }, [products.accessories, readyForShoes, selectedShoes, selectedTop, selectedBottom]);
 
   /*
    * -------------------------------------------------------
@@ -367,19 +405,33 @@ const OutfitBuilder = () => {
    */
   const clearAfterTop = () => {
     setBottomType(null);
+    setBottomGender("all");
     setSelectedBottom(null);
     setSelectedShoes(null);
     setSelectedAccessories([]);
   };
 
-  const selectTop = (product) => {
+  const selectTop = (product, fromDresses = false) => {
     if (selectedTop?._id === product._id) {
       setSelectedTop(null);
+      setIsDressSelected(false);
     } else {
       setSelectedTop(product);
+      setIsDressSelected(fromDresses);
     }
 
     clearAfterTop();
+  };
+
+  const selectTopMode = (mode) => {
+    setTopMode(mode);
+    setTopFilter("all");
+
+    if (selectedTop) {
+      setSelectedTop(null);
+      setIsDressSelected(false);
+      clearAfterTop();
+    }
   };
 
   const selectBottomType = (key) => {
@@ -428,6 +480,8 @@ const OutfitBuilder = () => {
 
   const resetBuilder = () => {
     setSelectedTop(null);
+    setIsDressSelected(false);
+    setTopMode("tops");
     setTopFilter("all");
     clearAfterTop();
     sectionRefs.top.current?.scrollIntoView({ behavior: "smooth" });
@@ -478,20 +532,24 @@ const OutfitBuilder = () => {
   }, [selectedBottom, selectedShoes, selectedAccessories]);
 
   const outfitMessage = (() => {
-    if (!selectedTop) return "Pick a top to start building your look.";
-    if (!selectedBottom) return "Great choice! Now pick a matching bottom.";
+    if (!selectedTop) return "Pick a top or a full dress to start building your look.";
+    if (!isDressSelected && !selectedBottom) return "Great choice! Now pick a matching bottom.";
     if (!selectedShoes) return "Almost there - choose a pair of shoes.";
     if (averageMatch >= 70) return "A stylish, balanced outfit — just for you!";
     return "A fresh, easy-going outfit — just for you!";
   })();
 
   const summaryRows = [
-    { key: "top", label: "Top", items: selectedTop ? [selectedTop] : [] },
+    {
+      key: "top",
+      label: isDressSelected ? "Dress" : "Top",
+      items: selectedTop ? [selectedTop] : [],
+    },
     { key: "bottom", label: "Bottom", items: selectedBottom ? [selectedBottom] : [] },
     { key: "shoes", label: "Shoes", items: selectedShoes ? [selectedShoes] : [] },
     { key: "accessories", label: "Bag", items: selectedBag ? [selectedBag] : [] },
     { key: "accessories", label: "Accessories", items: otherAccessories },
-  ];
+  ].filter((row) => row.key !== "bottom" || !isDressSelected);
 
   /*
    * -------------------------------------------------------
@@ -535,8 +593,9 @@ const OutfitBuilder = () => {
             <div>
               <h1>Outfit Builder</h1>
               <p>
-                Pick a top, and we'll suggest the best matching bottoms, shoes
-                and accessories for a stylish complete look!
+                Pick a top (or a full dress), and we'll suggest the best
+                matching bottoms, shoes and accessories for a stylish
+                complete look!
               </p>
             </div>
 
@@ -548,9 +607,13 @@ const OutfitBuilder = () => {
             )}
           </header>
 
-          {/* STEP 1 - TOP */}
+          {/* STEP 1 - TOP / DRESS */}
           <section className="ob-step" ref={sectionRefs.top}>
-            <StepTitle number={1} title="Select a" highlight="TOP" />
+            <StepTitle
+              number={1}
+              title="Select a"
+              highlight={topMode === "dresses" ? "DRESS" : "TOP"}
+            />
 
             {loading ? (
               <div className="ob-status">Finding your fashion pieces...</div>
@@ -559,46 +622,82 @@ const OutfitBuilder = () => {
                 <div className="ob-filters">
                   <button
                     type="button"
-                    className={topFilter === "all" ? "active" : ""}
-                    onClick={() => setTopFilter("all")}
+                    className={topMode === "tops" ? "active" : ""}
+                    onClick={() => selectTopMode("tops")}
                   >
-                    All
+                    Tops
                   </button>
-
-                  {topFilters.map((filter) => (
-                    <button
-                      type="button"
-                      key={filter.key}
-                      className={topFilter === filter.key ? "active" : ""}
-                      onClick={() => setTopFilter(filter.key)}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    className={topMode === "dresses" ? "active" : ""}
+                    onClick={() => selectTopMode("dresses")}
+                  >
+                    Full Dresses
+                  </button>
                 </div>
 
-                {visibleTops.length ? (
+                {topMode === "tops" && (
+                  <div className="ob-filters">
+                    <button
+                      type="button"
+                      className={topFilter === "all" ? "active" : ""}
+                      onClick={() => setTopFilter("all")}
+                    >
+                      All
+                    </button>
+
+                    {topFilters.map((filter) => (
+                      <button
+                        type="button"
+                        key={filter.key}
+                        className={topFilter === filter.key ? "active" : ""}
+                        onClick={() => setTopFilter(filter.key)}
+                      >
+                        {filter.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {topMode === "tops" ? (
+                  visibleTops.length ? (
+                    <div className="ob-grid">
+                      {visibleTops.map((product) => (
+                        <OptionCard
+                          key={product._id}
+                          image={getImage(product)}
+                          label={product.name}
+                          selected={selectedTop?._id === product._id && !isDressSelected}
+                          onClick={() => selectTop(product, false)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="ob-status">No tops in this style yet.</div>
+                  )
+                ) : wearableDresses.length ? (
                   <div className="ob-grid">
-                    {visibleTops.map((product) => (
+                    {wearableDresses.map((product) => (
                       <OptionCard
                         key={product._id}
                         image={getImage(product)}
                         label={product.name}
-                        selected={selectedTop?._id === product._id}
-                        onClick={() => selectTop(product)}
+                        selected={selectedTop?._id === product._id && isDressSelected}
+                        onClick={() => selectTop(product, true)}
                       />
                     ))}
                   </div>
                 ) : (
-                  <div className="ob-status">No tops in this style yet.</div>
+                  <div className="ob-status">No dresses available yet.</div>
                 )}
 
                 {selectedTop && (
                   <div className="ob-info">
                     <Sparkles size={18} />
                     <p>
-                      We'll now find compatible bottoms using a rule-based
-                      matching system + weighted sum model.
+                      {isDressSelected
+                        ? "A dress is a complete outfit on its own - we'll jump straight to shoes."
+                        : "We'll now find compatible bottoms using a rule-based matching system + weighted sum model."}
                     </p>
                   </div>
                 )}
@@ -607,67 +706,101 @@ const OutfitBuilder = () => {
           </section>
 
           {/* STEP 2 - BOTTOMS */}
-          <section
-            className={`ob-step ${selectedTop ? "" : "locked"}`}
-            ref={sectionRefs.bottom}
-          >
-            <StepTitle number={2} title="Compatible" highlight="BOTTOMS" />
+          {!isDressSelected && (
+            <section
+              className={`ob-step ${selectedTop ? "" : "locked"}`}
+              ref={sectionRefs.bottom}
+            >
+              <StepTitle number={2} title="Compatible" highlight="BOTTOMS" />
 
-            {!selectedTop ? (
-              <div className="ob-status">Select a top to see matching bottoms.</div>
-            ) : !bottomGroups.length ? (
-              <div className="ob-status">
-                No compatible bottoms found for this top. Try another top.
-              </div>
-            ) : (
-              <>
-                <div className="ob-grid">
-                  {bottomGroups.map((group) => (
-                    <OptionCard
-                      key={group.key}
-                      image={getImage(group.items[0])}
-                      label={group.label}
-                      badge={`${group.items[0].compatibilityScore}%`}
-                      selected={activeBottomGroup?.key === group.key}
-                      onClick={() => selectBottomType(group.key)}
-                    />
-                  ))}
-                </div>
+              {!selectedTop ? (
+                <div className="ob-status">Select a top to see matching bottoms.</div>
+              ) : (
+                <>
+                  <div className="ob-filters">
+                    <button
+                      type="button"
+                      className={bottomGender === "all" ? "active" : ""}
+                      onClick={() => setBottomGender("all")}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={bottomGender === "female" ? "active" : ""}
+                      onClick={() => setBottomGender("female")}
+                    >
+                      Women
+                    </button>
+                    <button
+                      type="button"
+                      className={bottomGender === "male" ? "active" : ""}
+                      onClick={() => setBottomGender("male")}
+                    >
+                      Men
+                    </button>
+                  </div>
 
-                <div className="ob-arrow">
-                  <ArrowDown size={16} />
-                </div>
+                  {!bottomGroups.length ? (
+                    <div className="ob-status">
+                      No bottoms found for this filter. Try another category or top.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="ob-grid">
+                        {bottomGroups.map((group) => (
+                          <OptionCard
+                            key={group.key}
+                            image={getImage(group.items[0])}
+                            label={group.label}
+                            badge={`${group.items[0].compatibilityScore}%`}
+                            selected={activeBottomGroup?.key === group.key}
+                            onClick={() => selectBottomType(group.key)}
+                          />
+                        ))}
+                      </div>
 
-                <div className="ob-subpanel">
-                  <h3>Select a bottom</h3>
+                      <div className="ob-arrow">
+                        <ArrowDown size={16} />
+                      </div>
 
-                  <Carousel>
-                    {activeBottomGroup.items.map((product) => (
-                      <OptionCard
-                        key={product._id}
-                        image={getImage(product)}
-                        label={product.name}
-                        badge={`${product.compatibilityScore}%`}
-                        selected={selectedBottom?._id === product._id}
-                        onClick={() => selectBottom(product)}
-                        compact
-                      />
-                    ))}
-                  </Carousel>
-                </div>
-              </>
-            )}
-          </section>
+                      <div className="ob-subpanel">
+                        <h3>Select a bottom ({activeBottomGroup.items.length} available)</h3>
+
+                        <Carousel>
+                          {activeBottomGroup.items.map((product) => (
+                            <OptionCard
+                              key={product._id}
+                              image={getImage(product)}
+                              label={product.name}
+                              badge={`${product.compatibilityScore}%`}
+                              selected={selectedBottom?._id === product._id}
+                              onClick={() => selectBottom(product)}
+                              compact
+                            />
+                          ))}
+                        </Carousel>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </section>
+          )}
 
           {/* STEP 3 - SHOES */}
           <section
-            className={`ob-step ${selectedBottom ? "" : "locked"}`}
+            className={`ob-step ${readyForShoes ? "" : "locked"}`}
             ref={sectionRefs.shoes}
           >
             <StepTitle number={3} title="Compatible" highlight="SHOES" />
 
-            {!selectedBottom ? (
-              <div className="ob-status">Select a bottom to see matching shoes.</div>
+            {!readyForShoes ? (
+              <div className="ob-status">
+                {isDressSelected
+                  ? "Select a dress to see matching shoes."
+                  : "Select a bottom to see matching shoes."}
+              </div>
             ) : !shoeOptions.length ? (
               <div className="ob-status">No compatible shoes found for this look.</div>
             ) : (
@@ -732,19 +865,23 @@ const OutfitBuilder = () => {
             {outfitPieces.length ? (
               <>
                 <div className="ob-collage-main">
-                  {selectedTop && <img src={getImage(selectedTop)} alt={selectedTop.name} />}
+                  {selectedTop && (
+                    <img src={getImage(selectedTop)} alt={selectedTop.name} onError={handleImageError} />
+                  )}
                   {selectedBottom && (
-                    <img src={getImage(selectedBottom)} alt={selectedBottom.name} />
+                    <img src={getImage(selectedBottom)} alt={selectedBottom.name} onError={handleImageError} />
                   )}
                 </div>
 
                 <div className="ob-collage-side">
                   {otherAccessories.map((item) => (
-                    <img key={item._id} src={getImage(item)} alt={item.name} />
+                    <img key={item._id} src={getImage(item)} alt={item.name} onError={handleImageError} />
                   ))}
-                  {selectedBag && <img src={getImage(selectedBag)} alt={selectedBag.name} />}
+                  {selectedBag && (
+                    <img src={getImage(selectedBag)} alt={selectedBag.name} onError={handleImageError} />
+                  )}
                   {selectedShoes && (
-                    <img src={getImage(selectedShoes)} alt={selectedShoes.name} />
+                    <img src={getImage(selectedShoes)} alt={selectedShoes.name} onError={handleImageError} />
                   )}
                 </div>
               </>
@@ -768,7 +905,11 @@ const OutfitBuilder = () => {
               >
                 <div className="ob-summary-thumb">
                   {row.items[0] ? (
-                    <img src={getImage(row.items[0])} alt={row.items[0].name} />
+                    <img
+                      src={getImage(row.items[0])}
+                      alt={row.items[0].name}
+                      onError={handleImageError}
+                    />
                   ) : (
                     <span>—</span>
                   )}
@@ -809,14 +950,16 @@ const OutfitBuilder = () => {
                 type="button"
                 className="ob-complete"
                 onClick={handleCompleteLook}
-                disabled={completingLook || !selectedBottom || !selectedShoes}
+                disabled={completingLook || !readyForShoes || !selectedShoes}
               >
                 <Sparkles size={17} />
                 {completingLook
                   ? "Adding to cart..."
-                  : selectedBottom && selectedShoes
+                  : readyForShoes && selectedShoes
                     ? "Complete Look"
-                    : "Pick a bottom & shoes to finish"}
+                    : isDressSelected
+                      ? "Pick shoes to finish"
+                      : "Pick a bottom & shoes to finish"}
               </button>
             </>
           )}
@@ -843,7 +986,7 @@ const OptionCard = ({ image, label, badge, selected, onClick, compact = false })
     title={label}
   >
     <div className="ob-card-image">
-      <img src={image} alt={label} />
+      <img src={image} alt={label} onError={handleImageError} />
 
       {selected && (
         <span className="ob-card-check">

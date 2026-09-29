@@ -7,6 +7,7 @@ import "../pages/SellerDashboard.css";
 const emptyForm = {
   name: "",
   category: [],
+  gender: "unisex",
   description: "",
   price: "",
   stock: "",
@@ -31,6 +32,8 @@ const toFormState = (product) => ({
           product.category.slice(1),
       ]
     : [],
+
+  gender: product.gender || "unisex",
 
   description: product.description || "",
   price: product.price ?? "",
@@ -113,6 +116,7 @@ if (form.category.length === 0) {
  const payload = {
   name: form.name,
   category: form.category.map((cat) => cat.toLowerCase()),
+  gender: form.gender,
   description: form.description,
   price: Number(form.price),
   stock: Number(form.stock),
@@ -221,6 +225,17 @@ if (form.category.length === 0) {
     </small>
   )}
 </div>
+
+        {/* GENDER */}
+
+        <div className="product-form-group">
+          <label>Gender</label>
+          <select name="gender" value={form.gender} onChange={handleChange}>
+            <option value="unisex">Unisex</option>
+            <option value="male">Men</option>
+            <option value="female">Women</option>
+          </select>
+        </div>
 
         {/* DESCRIPTION */}
 

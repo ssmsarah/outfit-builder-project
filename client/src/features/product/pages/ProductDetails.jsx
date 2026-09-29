@@ -5,7 +5,7 @@ import api from "../../../api/axios";
 import { useCart } from "../../../context/CartContext";
 import { useWishlist } from "../../../context/WishlistContext";
 import { useToast } from "../../../context/ToastContext";
-import { getImageUrl } from "../../../utils/getImageUrl";
+import { getImageUrl, handleImageError } from "../../../utils/getImageUrl";
 import "./ProductDetails.css";
 
 const ProductDetails = () => {
@@ -153,6 +153,7 @@ const ProductDetails = () => {
   <img
     src={getImageUrl(product.image)}
     alt={product.name}
+    onError={handleImageError}
   />
 </div>
 

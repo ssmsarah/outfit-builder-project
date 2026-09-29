@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, TrendingUp, TrendingDown, X } from "lucide-react";
 import { getOutfitRecommendations } from "../../../api/outfitApi";
-import { getImageUrl } from "../../../utils/getImageUrl";
+import { getImageUrl, handleImageError } from "../../../utils/getImageUrl";
 import "./OutfitSuggestions.css";
 
 // I7.5: outfits built around a search result. Each card shows the applied
@@ -82,7 +82,7 @@ const OutfitSuggestions = ({ anchor, occasion, season, onClose }) => {
             <div className="outfit-card-products">
               {outfit.products.map((product) => (
                 <Link to={`/product/${product.id}`} className="outfit-card-product" key={product.id} title={product.name}>
-                  <img src={getImageUrl(product.image)} alt={product.name} />
+                  <img src={getImageUrl(product.image)} alt={product.name} onError={handleImageError} />
                   <span>{product.name}</span>
                 </Link>
               ))}
